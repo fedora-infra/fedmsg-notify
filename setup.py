@@ -2,7 +2,7 @@ from setuptools import setup
 
 requires = [
         'fedmsg',
-        'zmq-static',]
+        'pyzmq-static',]
 setup(
         name="fedmsg-notify-consumer",
         verion='0.1.0',
@@ -10,13 +10,13 @@ setup(
         author="Ross Delinger",
         author_email="rossdylan@csh.rit.edu",
         install_requires=requires,
-        packages=['fedmsg-notify-consumer'],
+        packages=['fedmsg_notify_consumer'],
         zip_safe=False,
         entry_points={
             'console_scripts':
-                ['fedmsg-notify=fedmsg-notify-consumer.notify_command:notify'],
+                ['fedmsg-notify=fedmsg_notify_consumer.notify_command:notify'],
             'moksha.consumer':
-                ['fedmsg-notify=fedmsg-notify-consumer.notify_consumer:NotifyConsumer'],
+                ['fedmsg-notify=fedmsg_notify_consumer.notify_consumer:NotifyConsumer'],
              },)
 
 
