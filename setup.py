@@ -14,7 +14,7 @@ setup(
         zip_safe=False,
         entry_points={
             'console_scripts':
-                ['fedmsg-notify=fedmsg_notify_consumer.notify_command:notify'],
+                ['fedmsg-notify=fedmsg_notify_consumer.notify_cmd:notify'],
             'moksha.consumer':
                 ['fedmsg-notify=fedmsg_notify_consumer.notify_consumer:NotifyConsumer'],
              },)
