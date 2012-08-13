@@ -2,6 +2,7 @@ from paste.deploy.converters import asbool
 from fedmsg.consumers import FedmsgConsumer
 import logging
 import zmq
+import json
 
 log = logging.getLogger("moksha.hub")
 
@@ -23,4 +24,4 @@ class NotifyConsumer(FedmsgConsumer):
         self.subscribers.bind(listen_uri)
 
     def consume(self, msg):
-        self.subscribers.send(msg)
+        self.subscribers.send(json.dumps(msg))
