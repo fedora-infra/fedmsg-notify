@@ -1,7 +1,7 @@
 from fedmsg.commands import command
 
 extra_args = []
-
+from notify_consumer import NotifyConsumer
 @command(name='fedbadges-notify', extra_args=extra_args, daemonizable=True)
 def notify(**kw):
     """
@@ -16,4 +16,4 @@ def notify(**kw):
     kw['fedmsg.consumers.notifyconsumer.enabled'] = True
 
     from moksha.hub import main
-    main(options=kw)
+    main(options=kw, consumers=[NotifyConsumer])
