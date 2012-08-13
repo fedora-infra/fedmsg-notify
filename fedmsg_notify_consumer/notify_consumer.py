@@ -15,7 +15,7 @@ class NotifyConsumer(FedmsgConsumer):
             log.info(
                 'fedmsg.consumers.notifyconsumer disbaled')
         self.context = zmq.Context()
-        self.subscribers = self.context.Socket(zmq.PUB)
+        self.subscribers = self.context.socket(zmq.PUB)
         settings = self.hub.get("notify")
 
         listen_uri = settings.get(
