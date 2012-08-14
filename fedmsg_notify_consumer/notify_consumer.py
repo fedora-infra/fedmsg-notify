@@ -8,6 +8,7 @@ log = logging.getLogger("moksha.hub")
 
 
 class NotifyConsumer(FedmsgConsumer):
+    topic = 'org.fedoraproject.*'
     def __init__(self, hub):
         self.hub = hub
         ENABLED = 'fedmsg.consumers.notifyconsumer.enabled'
