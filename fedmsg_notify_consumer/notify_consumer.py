@@ -22,10 +22,8 @@ class NotifyConsumer(FedmsgConsumer):
         return super(NotifyConsumer, self).__init__(hub)
 
     def consume(self, msg):
-        if type(msg['body']) == type(""):
-            msg['body'] = json.loads(msg['body'])
-        if msg['topic'] != 'org.fedoraproject._heartbeat':
-            pretty_text = fedmsg.text.msg2repr(msg)
-            print pretty_text
-            note = pynotify.Notification("Fedmsg", pretty_text)
-            note.show()
+        body, topic = msg.get('body'), msg.get('topic')
+        pretty_text = fedmsg.text.msg2repr(body)
+        print pretty_text
+        note = pynotify.Notification("Fedmsg", pretty_text)
+        note.show()
