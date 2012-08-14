@@ -2,8 +2,7 @@ from paste.deploy.converters import asbool
 from fedmsg.consumers import FedmsgConsumer
 import fedmsg.text
 import logging
-import pynotify
-import json
+from gi.repository import Notify
 
 log = logging.getLogger("moksha.hub")
 
@@ -18,12 +17,12 @@ class NotifyConsumer(FedmsgConsumer):
         if not asbool(hub.config.get(ENABLED, False)):
             log.info(
                 'fedmsg.consumers.notifyconsumer disbaled')
-        pynotify.init("Fedmsg")
+        Notify.init("Fedmsg")
         return super(NotifyConsumer, self).__init__(hub)
 
     def consume(self, msg):
         body, topic = msg.get('body'), msg.get('topic')
         pretty_text = fedmsg.text.msg2repr(body)
         print pretty_text
-        note = pynotify.Notification("Fedmsg", pretty_text)
+        note = Notify.Notification.new("Fedmsg", pretty_text, "")
         note.show()

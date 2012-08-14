@@ -4,9 +4,9 @@ requires = [
         'fedmsg',
         'pyzmq-static',]
 try:
-    import pynotify
+    from gi.repository import Notify
 except:
-    print "Please install the libnotify python bindings"
+    print "Please install the gobject introspection libraries"
     exit()
 
 setup(
