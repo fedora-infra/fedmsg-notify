@@ -3,7 +3,7 @@ from fedmsg.consumers import FedmsgConsumer
 import fedmsg.text
 import logging
 import pynotify
-
+import json
 
 log = logging.getLogger("moksha.hub")
 
@@ -22,8 +22,10 @@ class NotifyConsumer(FedmsgConsumer):
         return super(NotifyConsumer, self).__init__(hub)
 
     def consume(self, msg):
-        print msg
-        pretty_text = fedmsg.text.msg2repr(msg)
-        print pretty_text
-        note = pynotify.Notification("Fedmsg", pretty_text)
-        note.show()
+        if type(msg['body']) == type(""):
+            msg['body'] = json.loads(msg['body'])
+        if msg['topic'] != 'org.fedoraproject._heartbeat':
+            pretty_text = fedmsg.text.msg2repr(msg)
+            print pretty_text
+            note = pynotify.Notification("Fedmsg", pretty_text)
+            note.show()
