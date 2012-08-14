@@ -22,6 +22,8 @@ class NotifyConsumer(FedmsgConsumer):
         return super(NotifyConsumer, self).__init__(hub)
 
     def consume(self, msg):
+        print msg
         pretty_text = fedmsg.text.msg2repr(msg)
-        note = pynotify.Notification(pretty_text)
+        print pretty_text
+        note = pynotify.Notification("Fedmsg", pretty_text)
         note.show()

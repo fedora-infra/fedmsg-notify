@@ -3,10 +3,16 @@ from setuptools import setup
 requires = [
         'fedmsg',
         'pyzmq-static',]
+try:
+    import pynotify
+except:
+    print "Please install the libnotify python bindings"
+    exit()
+
 setup(
         name="fedmsg-notify-consumer",
         verion='0.1.0',
-        description="Consumer for fedmsg that sends out notifications to a desktop app",
+        description="Consumer for fedmsg that spits out libnotify desktop notifications",
         author="Ross Delinger",
         author_email="rossdylan@csh.rit.edu",
         install_requires=requires,
