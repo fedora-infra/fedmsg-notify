@@ -11,7 +11,6 @@ class NotifyConsumer(FedmsgConsumer):
     topic = 'org.fedoraproject.*'
     def __init__(self, hub):
         self.hub = hub
-        self.DBSession = None
 
         ENABLED = 'fedmsg.consumers.notifyconsumer.enabled'
         if not asbool(hub.config.get(ENABLED, False)):
