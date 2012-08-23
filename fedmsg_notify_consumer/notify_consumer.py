@@ -9,10 +9,11 @@ log = logging.getLogger("moksha.hub")
 
 class NotifyConsumer(FedmsgConsumer):
     topic = 'org.fedoraproject.*'
+    config_key = 'fedmsg.consumers.notifyconsumer.enabled'
     def __init__(self, hub):
         self.hub = hub
 
-        ENABLED = 'fedmsg.consumers.notifyconsumer.enabled'
+        ENABLED = self.config_key
         if not asbool(hub.config.get(ENABLED, False)):
             log.info(
                 'fedmsg.consumers.notifyconsumer disbaled')
