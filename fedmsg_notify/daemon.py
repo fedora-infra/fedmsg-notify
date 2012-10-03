@@ -23,13 +23,12 @@ from twisted.internet import reactor
 
 import logging
 import dbus
+import dbus.glib
 import dbus.service
-if getattr(dbus, 'version', (0, 0, 0)) >= (0, 41, 0):
-    import dbus.glib
-
 import moksha.hub
 import fedmsg.text
 import fedmsg.consumers
+
 from gi.repository import Notify
 
 log = logging.getLogger('moksha.hub')
