@@ -70,6 +70,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     @dbus.service.method(bus_name)
     def Disable(self, *args, **kw):
         Notify.Notification.new("fedmsg", "deactivated", "").show()
+        self.hub.close()
         reactor.stop()
         return True
 
