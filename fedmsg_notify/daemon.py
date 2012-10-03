@@ -21,6 +21,7 @@ from twisted.internet import gtk3reactor
 gtk3reactor.install()
 from twisted.internet import reactor
 
+import logging
 import dbus
 import dbus.service
 if getattr(dbus, 'version', (0, 0, 0)) >= (0, 41, 0):
@@ -30,6 +31,8 @@ import moksha.hub
 import fedmsg.text
 import fedmsg.consumers
 from gi.repository import Notify
+
+log = logging.getLogger('moksha.hub')
 
 
 class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
@@ -43,6 +46,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         cfg = {'zmq_enabled': True,
                'zmq_subscribe_endpoints': self.endpoint,
                self.config_key: True}
+        moksha.hub.setup_logger(verbose=True)
         moksha.hub._hub = moksha.hub.CentralMokshaHub(cfg)
         fedmsg.consumers.FedmsgConsumer.__init__(self, moksha.hub._hub)
 
