@@ -34,9 +34,9 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         self.bus = dbus.SessionBus()
         running = self.bus.name_has_owner(self.bus_name)
 
-        switch = Gtk.Switch()
-        switch.set_active(running)
-        switch.connect("notify::active", self.activate_cb)
+        self.switch = Gtk.Switch()
+        self.switch.set_active(running)
+        self.switch.connect("notify::active", self.activate_cb)
 
         label = Gtk.Label()
         label.set_text("Fedmsg Desktop Notifications")
@@ -44,11 +44,17 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         grid = Gtk.Grid()
         grid.set_column_spacing(10)
         grid.attach(label, 1, 0, 1, 1)
-        grid.attach(switch, 0, 0, 1, 1)
+        grid.attach(self.switch, 0, 0, 1, 1)
         self.add(grid)
 
     def activate_cb(self, button, active):
-        notify_obj = self.bus.get_object(self.bus_name, self.obj_path)
+        try:
+            notify_obj = self.bus.get_object(self.bus_name, self.obj_path)
+        except dbus.exceptions.DBusException, e:
+            print(str(e))
+            self.switch.set_active(False)
+            return False
+
         notify_iface = dbus.Interface(notify_obj, self.bus_name)
         if button.get_active():
             notify_iface.Enable()
