@@ -40,21 +40,42 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     topic = 'org.fedoraproject.*'
     config_key = 'fedmsg.consumers.notifyconsumer.enabled'
     bus_name = 'org.fedoraproject.fedmsg.notify'
-    obj_path = '/%s' % bus_name.replace('.', '/')
-    endpoint = 'tcp://hub.fedoraproject.org:9940'
+    _object_path = '/%s' % bus_name.replace('.', '/')
     _icon_cache = {}
 
+    __name__ = "FedmsgNotifyService"
+
+    def __call__(self, hub):
+        """ This is a silly hack to help us bridge the gap between
+        moksha-land and dbus-land.
+        """
+        return self
+
     def __init__(self):
-        cfg = {'zmq_enabled': True,
-               'zmq_subscribe_endpoints': self.endpoint,
-               self.config_key: True}
+        cfg = fedmsg.config.load_config(None, [])
+        moksha_options = {
+            self.config_key: True,
+            "zmq_subscribe_endpoints": ','.join(
+                ','.join(bunch) for bunch in
+                cfg['endpoints'].values()
+            ),
+        }
+        cfg.update(moksha_options)
+
         moksha.hub.setup_logger(verbose=True)
-        moksha.hub._hub = moksha.hub.CentralMokshaHub(cfg)
+
+        # Despite what fedmsg.config might say about what consumers are enabled
+        # and which are not, we're only going to let the central moksha hub know
+        # about *our* consumer.  By specifying this here, it won't even check
+        # the entry-points list.
+        consumers, prods = [self], []
+        moksha.hub._hub = moksha.hub.CentralMokshaHub(cfg, consumers, prods)
+
         fedmsg.consumers.FedmsgConsumer.__init__(self, moksha.hub._hub)
 
         self.session_bus = dbus.SessionBus()
         bus_name = dbus.service.BusName(self.bus_name, bus=self.session_bus)
-        dbus.service.Object.__init__(self, bus_name, self.obj_path)
+        dbus.service.Object.__init__(self, bus_name, self._object_path)
 
         Notify.init("fedmsg")
         Notify.Notification.new("fedmsg", "activated", "").show()
