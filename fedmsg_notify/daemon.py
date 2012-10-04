@@ -73,7 +73,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
                                                    icon_file))
                 self._icon_cache[icon] = icon_file
             icon = icon_file
-        note = Notify.Notification.new("fedmsg", pretty_text, icon_file)
+        note = Notify.Notification.new("fedmsg", pretty_text, icon)
         note.show()
 
     @dbus.service.method(bus_name)

@@ -71,6 +71,7 @@ class FedmsgNotifyConfigApp(Gtk.Application):
     def do_startup(self):
         Gtk.Application.do_startup(self)
 
+
 if __name__ == '__main__':
     app = FedmsgNotifyConfigApp()
     sys.exit(app.run(sys.argv))
