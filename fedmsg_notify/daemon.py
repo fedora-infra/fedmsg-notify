@@ -21,6 +21,8 @@ from twisted.internet import gtk3reactor
 gtk3reactor.install()
 from twisted.internet import reactor
 
+import os
+import urllib
 import logging
 import dbus
 import dbus.glib
@@ -40,6 +42,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     bus_name = 'org.fedoraproject.fedmsg.notify'
     obj_path = '/%s' % bus_name.replace('.', '/')
     endpoint = 'tcp://hub.fedoraproject.org:9940'
+    _icon_cache = {}
 
     def __init__(self):
         cfg = {'zmq_enabled': True,
@@ -59,7 +62,18 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     def consume(self, msg):
         body, topic = msg.get('body'), msg.get('topic')
         pretty_text = fedmsg.text.msg2repr(body)
-        note = Notify.Notification.new("fedmsg", pretty_text, "")
+        log.debug(pretty_text)
+        icon = fedmsg.text._msg2icon(msg) or ''
+        log.debug("icon = %s" % icon)
+        if icon:
+            icon_file = self._icon_cache.get(icon)
+            if not icon_file:
+                icon_file, headers = urllib.urlretrieve(icon)
+                log.debug('Downloaded %s to %s' % (icon.split('/')[-1],
+                                                   icon_file))
+                self._icon_cache[icon] = icon_file
+            icon = icon_file
+        note = Notify.Notification.new("fedmsg", pretty_text, icon_file)
         note.show()
 
     @dbus.service.method(bus_name)
@@ -69,14 +83,17 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
     @dbus.service.method(bus_name)
     def Disable(self, *args, **kw):
-        Notify.Notification.new("fedmsg", "deactivated", "").show()
+        for icon, filename in self._icon_cache.items():
+            log.debug('Deleting cached icon %s' % filename)
+            os.unlink(filename)
         self.hub.close()
+        Notify.Notification.new("fedmsg", "deactivated", "").show()
         reactor.stop()
         return True
 
 
 def main():
-    server = FedmsgNotifyService()
+    FedmsgNotifyService()
     reactor.run()
 
 if __name__ == '__main__':
