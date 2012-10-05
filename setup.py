@@ -2,14 +2,7 @@ from setuptools import setup
 
 requires = [
     'fedmsg',
-    #'pyzmq-static',
 ]
-
-try:
-    from gi.repository import Notify
-except:
-    print "Please install the gobject introspection libraries"
-    exit()
 
 setup(
         name="fedmsg-notify",
