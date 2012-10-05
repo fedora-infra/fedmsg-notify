@@ -108,7 +108,6 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     @dbus.service.method(bus_name)
     def Enable(self, *args, **kw):
         """ A noop method called by the gui to load this service """
-        return True
 
     @dbus.service.method(bus_name)
     def Disable(self, *args, **kw):
@@ -118,7 +117,6 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         self.hub.close()
         Notify.Notification.new("fedmsg", "deactivated", "").show()
         reactor.stop()
-        return True
 
 
 def main():
