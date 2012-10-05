@@ -93,6 +93,12 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
     def consume(self, msg):
         body, topic = msg.get('body'), msg.get('topic')
+
+        # Ignore busmon messages for now.
+        # https://github.com/ralphbean/busmon/issues/2
+        if 'busmon.colorized-messages' in topic:
+            return
+
         pretty_text = fedmsg.text.msg2repr(body)
         log.debug(pretty_text)
         title = fedmsg.text._msg2title(body)
