@@ -84,17 +84,31 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         body, topic = msg.get('body'), msg.get('topic')
         pretty_text = fedmsg.text.msg2repr(body)
         log.debug(pretty_text)
-        icon = fedmsg.text._msg2icon(msg) or ''
-        log.debug("icon = %s" % icon)
+        title = fedmsg.text._msg2title(body)
+        subtitle = fedmsg.text._msg2subtitle(body)
+        icon = fedmsg.text._msg2icon(body) or ''
+        secondary_icon = fedmsg.text._msg2secondary_icon(body) or ''
+        link = fedmsg.text._msg2link(body)
         if icon:
             icon_file = self._icon_cache.get(icon)
             if not icon_file:
+                log.debug('Downloading icon: %s' % icon)
                 icon_file, headers = urllib.urlretrieve(icon)
-                log.debug('Downloaded %s to %s' % (icon.split('/')[-1],
-                                                   icon_file))
                 self._icon_cache[icon] = icon_file
             icon = icon_file
-        note = Notify.Notification.new("fedmsg", pretty_text, icon)
+        if secondary_icon:
+            secondary_icon_file = self._icon_cache.get(secondary_icon)
+            if not secondary_icon_file:
+                log.debug('Downloading secondary icon: %s' %
+                          secondary_icon)
+                secondary_icon_file, headers = \
+                    urllib.urlretrieve(secondary_icon)
+                self._icon_cache[secondary_icon] = secondary_icon_file
+            secondary_icon = secondary_icon_file
+        log.debug(msg)
+        note = Notify.Notification.new(title, subtitle + ' ' + link, icon)
+        if secondary_icon:
+            note.set_hint_string('image-path', secondary_icon)
         note.show()
 
     @dbus.service.method(bus_name)
