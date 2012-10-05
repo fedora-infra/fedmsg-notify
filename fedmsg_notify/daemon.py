@@ -112,8 +112,10 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     @dbus.service.method(bus_name)
     def Disable(self, *args, **kw):
         for icon, filename in self._icon_cache.items():
-            log.debug('Deleting cached icon %s' % filename)
-            os.unlink(filename)
+            try:
+                os.unlink(filename)
+            except OSError:
+                pass
         self.hub.close()
         Notify.Notification.new("fedmsg", "deactivated", "").show()
         reactor.stop()
