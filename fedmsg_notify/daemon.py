@@ -37,6 +37,18 @@ log = logging.getLogger('moksha.hub')
 
 
 class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
+    """The Fedmsg Notification Daemon.
+
+    This service is started through DBus activation by calling the
+    :meth:`Enable` method, and stopped with :meth:`Disable`.
+
+    This class is not only a DBus service, it is also a Moksha message consumer
+    that listens to all messages coming from the Fedora Infrastructure. Moksha
+    handles automatically connecting to the remote message hub, subscribing to
+    all topics, and calling our :meth:`consume` method with each decoded
+    message.
+
+    """
     topic = 'org.fedoraproject.*'
     config_key = 'fedmsg.consumers.notifyconsumer.enabled'
     bus_name = 'org.fedoraproject.fedmsg.notify'
