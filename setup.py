@@ -2,7 +2,7 @@ from setuptools import setup
 
 requires = [
     'fedmsg',
-    'pyzmq-static',
+    #'pyzmq-static',
 ]
 
 try:
