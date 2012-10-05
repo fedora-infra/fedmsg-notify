@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Fedmsg Notification Configuration
+Exec=fedmsg-notify-config
+Icon=fedora-logo-icon
+Terminal=false
+Type=Application
+StartupNotify=true
+Categories=GNOME;GTK;Settings;DesktopSettings;
