@@ -86,9 +86,16 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         log.debug(pretty_text)
         title = fedmsg.text._msg2title(body)
         subtitle = fedmsg.text._msg2subtitle(body)
-        icon = fedmsg.text._msg2icon(body) or ''
-        secondary_icon = fedmsg.text._msg2secondary_icon(body) or ''
         link = fedmsg.text._msg2link(body)
+        icon = self.get_icon(body)
+        secondary_icon = self.get_secondary_icon(body)
+        note = Notify.Notification.new(title, subtitle + ' ' + link, icon)
+        if secondary_icon:
+            note.set_hint_string('image-path', secondary_icon)
+        note.show()
+
+    def get_icon(self, msg):
+        icon = fedmsg.text._msg2icon(msg) or ''
         if icon:
             icon_file = self._icon_cache.get(icon)
             if not icon_file:
@@ -96,6 +103,10 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
                 icon_file, headers = urllib.urlretrieve(icon)
                 self._icon_cache[icon] = icon_file
             icon = icon_file
+        return icon
+
+    def get_secondary_icon(self, msg):
+        secondary_icon = fedmsg.text._msg2secondary_icon(msg) or ''
         if secondary_icon:
             secondary_icon_file = self._icon_cache.get(secondary_icon)
             if not secondary_icon_file:
@@ -105,11 +116,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
                     urllib.urlretrieve(secondary_icon)
                 self._icon_cache[secondary_icon] = secondary_icon_file
             secondary_icon = secondary_icon_file
-        log.debug(msg)
-        note = Notify.Notification.new(title, subtitle + ' ' + link, icon)
-        if secondary_icon:
-            note.set_hint_string('image-path', secondary_icon)
-        note.show()
+        return secondary_icon
 
     @dbus.service.method(bus_name)
     def Enable(self, *args, **kw):
