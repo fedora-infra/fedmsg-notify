@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # This file is a part of fedmsg-notify.
 #
 # fedmsg-notify is free software: you can redistribute it and/or modify
