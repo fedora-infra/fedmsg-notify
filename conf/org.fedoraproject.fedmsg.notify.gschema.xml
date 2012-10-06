@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.fedoraproject.fedmsg.notify" path="/org/fedoraproject/fedmsg/notify/">
+    <key type="b" name="enabled">
+      <default>false</default>
+      <summary>fedmsg-notify service enabled</summary>
+      <description>Whether or not the fedmsg-notify service should be running</description>
+    </key>
+  </schema>
+</schemalist>

@@ -19,7 +19,7 @@
 import sys
 import dbus
 
-from gi.repository import Gtk
+from gi.repository import Gtk, Gio
 
 
 class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
@@ -30,13 +30,19 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         Gtk.Window.__init__(self, title="fedmsg-notify-config", application=app)
         self.set_default_size(300, 100)
         self.set_border_width(10)
+        self.settings = Gio.Settings.new(self.bus_name)
+        self.settings.connect('changed::enabled', self.settings_changed)
 
         self.bus = dbus.SessionBus()
         running = self.bus.name_has_owner(self.bus_name)
 
         self.switch = Gtk.Switch()
-        self.switch.set_active(running)
         self.switch.connect("notify::active", self.activate_cb)
+        enabled = self.settings.get_boolean('enabled')
+        if enabled and not running:
+            self.toggle_service(True)
+        elif running and not enabled:
+            self.toggle_service(True)
 
         label = Gtk.Label()
         label.set_text("Fedmsg Desktop Notifications")
@@ -48,18 +54,25 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         self.add(grid)
 
     def activate_cb(self, button, active):
+        self.toggle_service(button.get_active())
+
+    def toggle_service(self, state):
         try:
             notify_obj = self.bus.get_object(self.bus_name, self.obj_path)
         except dbus.exceptions.DBusException, e:
             print(str(e))
             self.switch.set_active(False)
             return False
-
         notify_iface = dbus.Interface(notify_obj, self.bus_name)
-        if button.get_active():
+        if state:
             notify_iface.Enable()
         else:
             notify_iface.Disable()
+        self.switch.set_active(state)
+        self.settings.set_boolean('enabled', state)
+
+    def settings_changed(self, settings, key):
+        self.switch.set_active(settings.get_boolean(key))
 
 
 class FedmsgNotifyConfigApp(Gtk.Application):
@@ -78,3 +91,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+# vim: ts=4 sw=4 expandtab ai
