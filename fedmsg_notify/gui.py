@@ -42,7 +42,7 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         if enabled and not running:
             self.toggle_service(True)
         elif running and not enabled:
-            self.toggle_service(True)
+            self.toggle_service(False)
 
         label = Gtk.Label()
         label.set_text("Fedmsg Desktop Notifications")
