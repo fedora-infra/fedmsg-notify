@@ -31,18 +31,21 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         self.set_default_size(300, 100)
         self.set_border_width(10)
         self.settings = Gio.Settings.new(self.bus_name)
-        self.settings.connect('changed::enabled', self.settings_changed)
 
         self.bus = dbus.SessionBus()
         running = self.bus.name_has_owner(self.bus_name)
 
         self.switch = Gtk.Switch()
-        self.switch.connect("notify::active", self.activate_cb)
+        self.connect_signal_handlers()
         enabled = self.settings.get_boolean('enabled')
         if enabled and not running:
             self.toggle_service(True)
         elif running and not enabled:
             self.toggle_service(False)
+        elif enabled and running:
+            self.disconnect_signal_handlers()
+            self.switch.set_active(True)
+            self.connect_signal_handlers()
 
         label = Gtk.Label()
         label.set_text("Fedmsg Desktop Notifications")
@@ -69,10 +72,24 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         else:
             notify_iface.Disable()
         self.switch.set_active(state)
+        self.disconnect_signal_handlers()
         self.settings.set_boolean('enabled', state)
+        self.connect_signal_handlers()
+
+    def connect_signal_handlers(self):
+        self.setting_conn = self.settings.connect(
+            'changed::enabled', self.settings_changed)
+        self.switch_conn = self.switch.connect(
+            "notify::active", self.activate_cb)
+
+    def disconnect_signal_handlers(self):
+        self.settings.disconnect(self.setting_conn)
+        self.switch.disconnect(self.switch_conn)
 
     def settings_changed(self, settings, key):
+        self.disconnect_signal_handlers()
         self.switch.set_active(settings.get_boolean(key))
+        self.connect_signal_handlers()
 
 
 class FedmsgNotifyConfigApp(Gtk.Application):
