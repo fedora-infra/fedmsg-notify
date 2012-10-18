@@ -63,15 +63,15 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         return self
 
     def __init__(self):
-        cfg = fedmsg.config.load_config(None, [])
+        self.cfg = fedmsg.config.load_config(None, [])
         moksha_options = {
             self.config_key: True,
             "zmq_subscribe_endpoints": ','.join(
                 ','.join(bunch) for bunch in
-                cfg['endpoints'].values()
+                self.cfg['endpoints'].values()
             ),
         }
-        cfg.update(moksha_options)
+        self.cfg.update(moksha_options)
 
         moksha.hub.setup_logger(verbose=True)
 
@@ -80,7 +80,8 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         # about *our* consumer.  By specifying this here, it won't even check
         # the entry-points list.
         consumers, prods = [self], []
-        moksha.hub._hub = moksha.hub.CentralMokshaHub(cfg, consumers, prods)
+        moksha.hub._hub = moksha.hub.CentralMokshaHub(self.cfg, consumers,
+                                                      prods)
 
         fedmsg.consumers.FedmsgConsumer.__init__(self, moksha.hub._hub)
 
@@ -93,14 +94,14 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
     def consume(self, msg):
         body, topic = msg.get('body'), msg.get('topic')
-        pretty_text = fedmsg.text.msg2repr(body)
+        pretty_text = fedmsg.text.msg2repr(body, **self.cfg)
         log.debug(pretty_text)
-        title = fedmsg.text._msg2title(body)
-        subtitle = fedmsg.text._msg2subtitle(body)
-        link = fedmsg.text._msg2link(body)
-        icon = self.get_icon(fedmsg.text._msg2icon(body))
+        title = fedmsg.text.msg2title(body, **self.cfg)
+        subtitle = fedmsg.text.msg2subtitle(body, **self.cfg)
+        link = fedmsg.text.msg2link(body, **self.cfg)
+        icon = self.get_icon(fedmsg.text.msg2icon(body, **self.cfg))
         secondary_icon = self.get_icon(
-            fedmsg.text._msg2secondary_icon(body))
+            fedmsg.text.msg2secondary_icon(body, **self.cfg))
         note = Notify.Notification.new(title, subtitle + ' ' + link, icon)
         if secondary_icon:
             note.set_hint_string('image-path', secondary_icon)
