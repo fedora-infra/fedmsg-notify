@@ -21,6 +21,7 @@ gtk3reactor.install()
 from twisted.internet import reactor
 
 import os
+import json
 import urllib
 import logging
 import dbus
@@ -30,7 +31,7 @@ import moksha.hub
 import fedmsg.text
 import fedmsg.consumers
 
-from gi.repository import Notify
+from gi.repository import Notify, Gio
 
 log = logging.getLogger('moksha.hub')
 
@@ -51,6 +52,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     topic = 'org.fedoraproject.*'
     config_key = 'fedmsg.consumers.notifyconsumer.enabled'
     bus_name = 'org.fedoraproject.fedmsg.notify'
+    filters = []  # A list of [optional] text processor regular expressions
     _object_path = '/%s' % bus_name.replace('.', '/')
     _icon_cache = {}
 
@@ -63,6 +65,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         return self
 
     def __init__(self):
+        self.connect_signal_handlers()
         self.cfg = fedmsg.config.load_config(None, [])
         moksha_options = {
             self.config_key: True,
@@ -92,8 +95,26 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         Notify.init("fedmsg")
         Notify.Notification.new("fedmsg", "activated", "").show()
 
+    def connect_signal_handlers(self):
+        self.settings = Gio.Settings.new(self.bus_name)
+        self.setting_conn = self.settings.connect(
+            'changed::enabled-filters', self.settings_changed)
+
+    def settings_changed(self, settings, key):
+        services = json.loads(settings.get_string(key))
+        self.filters = []
+        for processor in fedmsg.text.processors:
+            if processor.__name__ in services:
+                self.filters.append(processor.__prefix__)
+
     def consume(self, msg):
         body, topic = msg.get('body'), msg.get('topic')
+        for filter in self.filters:
+            if filter.match(topic):
+                break
+        else:
+            log.debug("Message to %s didn't match filters" % topic)
+            return
         pretty_text = fedmsg.text.msg2repr(body, **self.cfg)
         log.debug(pretty_text)
         title = fedmsg.text.msg2title(body, **self.cfg)
