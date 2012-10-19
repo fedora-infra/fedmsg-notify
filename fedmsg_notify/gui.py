@@ -18,6 +18,7 @@
 
 import sys
 import dbus
+import json
 import fedmsg.text
 
 from gi.repository import Gtk, Gio
@@ -34,6 +35,11 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         self.set_default_size(300, 100)
         self.set_border_width(10)
         self.settings = Gio.Settings.new(self.bus_name)
+        self.enabled_filters = self.settings.get_string('enabled-filters')
+        if self.enabled_filters:
+            self.enabled_filters = json.loads(self.enabled_filters)
+        else:
+            self.enabled_filters = []
 
         self.bus = dbus.SessionBus()
         running = self.bus.name_has_owner(self.bus_name)
@@ -64,11 +70,16 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         """ Create an on/off switch for each fedmsg text processor """
         top_label = self.all_toggle_label
         top_switch = self.all_switch
-        for i, processor in enumerate(fedmsg.text.processors):
+        for processor in fedmsg.text.processors:
             label = Gtk.Label()
             label.set_text(processor.__obj__)
             switch = Gtk.Switch()
-            switch.__name__ = processor.__obj__
+            if self.enabled_filters:
+                if processor.__name__ in self.enabled_filters:
+                    switch.set_active(True)
+            else:
+                switch.set_active(True)
+            switch.__name__ = processor.__name__
             self._switches[switch] = None
             self.grid.attach_next_to(label, top_label,
                                      Gtk.PositionType.BOTTOM, 1, 1)
@@ -76,10 +87,18 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
                                      Gtk.PositionType.BOTTOM, 1, 1)
             top_label = label
             top_switch = switch
+        if not self.enabled_filters:
+            self.enabled_filters = [s.__name__ for s in self._switches]
 
     def activate_filter_switch(self, button, active):
         """ Called when the text processor specific filters are selected """
-        print(button.__name__)
+        if button.get_active():
+            if button.__name__ not in self.enabled_filters:
+                self.enabled_filters.append(button.__name__)
+        else:
+            self.enabled_filters.remove(button.__name__)
+        self.settings.set_string('enabled-filters',
+                                 json.dumps(self.enabled_filters))
 
     def activate_cb(self, button, active):
         self.toggle_service(button.get_active())
@@ -114,7 +133,6 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         self.settings.disconnect(self.setting_conn)
         self.all_switch.disconnect(self.switch_conn)
         for switch, switch_conn in self._switches.iteritems():
-            print(repr(switch_conn))
             switch.disconnect(switch_conn)
             self._switches[switch] = None
 
