@@ -52,7 +52,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     topic = 'org.fedoraproject.*'
     config_key = 'fedmsg.consumers.notifyconsumer.enabled'
     bus_name = 'org.fedoraproject.fedmsg.notify'
-    filters = []  # A list of [optional] text processor regular expressions
+    filters = []  # A list of regex filters from the fedmsg text processors
     _object_path = '/%s' % bus_name.replace('.', '/')
     _icon_cache = {}
 
@@ -101,6 +101,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
             'changed::enabled-filters', self.settings_changed)
 
     def settings_changed(self, settings, key):
+        log.info('Settings changed. Reloading filters.')
         services = json.loads(settings.get_string(key))
         self.filters = []
         for processor in fedmsg.text.processors:
