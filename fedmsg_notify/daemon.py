@@ -103,10 +103,11 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     def settings_changed(self, settings, key):
         log.info('Settings changed. Reloading filters.')
         services = json.loads(settings.get_string(key))
-        self.filters = []
+        filters = []
         for processor in fedmsg.text.processors:
             if processor.__name__ in services:
-                self.filters.append(processor.__prefix__)
+                filters.append(processor.__prefix__)
+        self.filters = filters
 
     def consume(self, msg):
         body, topic = msg.get('body'), msg.get('topic')
