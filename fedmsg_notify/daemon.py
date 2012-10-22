@@ -92,6 +92,8 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         bus_name = dbus.service.BusName(self.bus_name, bus=self.session_bus)
         dbus.service.Object.__init__(self, bus_name, self._object_path)
 
+        self.settings_changed(self.settings, 'enabled-filters')
+
         Notify.init("fedmsg")
         Notify.Notification.new("fedmsg", "activated", "").show()
 
