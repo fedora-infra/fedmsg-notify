@@ -79,6 +79,8 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         self.cfg.update(moksha_options)
 
         moksha.hub.setup_logger(verbose=True)
+        fedmsg.text.make_processors(**self.cfg)
+        self.settings_changed(self.settings, 'enabled-filters')
 
         # Despite what fedmsg.config might say about what consumers are enabled
         # and which are not, we're only going to let the central moksha hub know
@@ -113,10 +115,6 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
     def consume(self, msg):
         body, topic = msg.get('body'), msg.get('topic')
-        if not self.filters:
-            # This will cause fedmsg to create the __prefix__ regex
-            fedmsg.text.msg2processor(msg, **self.cfg)
-            self.settings_changed(self.settings, 'enabled-filters')
         for filter in self.filters:
             if filter.match(topic):
                 log.debug('Matched topic %s with %s' % (topic, filter.pattern))
