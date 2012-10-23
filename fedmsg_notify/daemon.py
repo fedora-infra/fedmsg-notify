@@ -102,12 +102,13 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
             'changed::enabled-filters', self.settings_changed)
 
     def settings_changed(self, settings, key):
-        log.info('Settings changed. Reloading filters.')
+        log.debug('Reloading fedmsg text processor filters.')
         services = json.loads(settings.get_string(key))
         filters = []
         for processor in fedmsg.text.processors:
             if processor.__name__ in services:
                 filters.append(processor.__prefix__)
+                log.debug('%s = %s' % (processor.__name__, filters[-1].pattern))
         self.filters = filters
 
     def consume(self, msg):
@@ -118,10 +119,12 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
             self.settings_changed(self.settings, 'enabled-filters')
         for filter in self.filters:
             if filter.match(topic):
+                log.debug('Matched topic %s with %s' % (topic, filter.pattern))
                 break
         else:
             log.debug("Message to %s didn't match filters" % topic)
             return
+
         pretty_text = fedmsg.text.msg2repr(body, **self.cfg)
         log.debug(pretty_text)
         title = fedmsg.text.msg2title(body, **self.cfg)
@@ -147,7 +150,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
     @dbus.service.method(bus_name)
     def Enable(self, *args, **kw):
-        """ A noop method called by the gui to load this service """
+        """ A noop method called to activate this service over dbus """
 
     @dbus.service.method(bus_name)
     def Disable(self, *args, **kw):
