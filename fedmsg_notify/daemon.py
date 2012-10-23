@@ -65,7 +65,9 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         return self
 
     def __init__(self):
+        self.settings = Gio.Settings.new(self.bus_name)
         self.connect_signal_handlers()
+
         self.cfg = fedmsg.config.load_config(None, [])
         moksha_options = {
             self.config_key: True,
@@ -96,7 +98,6 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         Notify.Notification.new("fedmsg", "activated", "").show()
 
     def connect_signal_handlers(self):
-        self.settings = Gio.Settings.new(self.bus_name)
         self.setting_conn = self.settings.connect(
             'changed::enabled-filters', self.settings_changed)
 
