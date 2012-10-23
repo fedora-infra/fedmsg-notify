@@ -92,8 +92,6 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         bus_name = dbus.service.BusName(self.bus_name, bus=self.session_bus)
         dbus.service.Object.__init__(self, bus_name, self._object_path)
 
-        self.settings_changed(self.settings, 'enabled-filters')
-
         Notify.init("fedmsg")
         Notify.Notification.new("fedmsg", "activated", "").show()
 
@@ -113,6 +111,10 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
     def consume(self, msg):
         body, topic = msg.get('body'), msg.get('topic')
+        if not self.filters:
+            # This will cause fedmsg to create the __prefix__ regex
+            fedmsg.text.msg2processor(msg, **self.cfg)
+            self.settings_changed(self.settings, 'enabled-filters')
         for filter in self.filters:
             if filter.match(topic):
                 break
