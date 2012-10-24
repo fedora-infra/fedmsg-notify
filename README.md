@@ -1,7 +1,7 @@
 fedmsg-notify
 =============
 
-Subscribing to the `Fedora Infrastructure Messsage Bus <http://fedmsg.com>`_ on the desktop.
+Subscribing to the [Fedora Infrastructure Messsage Bus](http://fedmsg.com) on the desktop.
 
 
 Features
@@ -10,7 +10,7 @@ Features
  * A dbus-activated `fedmsg-notify-daemon` that consumes every message
    from the Fedora Infrastructure Messaging bus.
 
- * A fedmsg-notify-config` graphical interface that lets you filter which
+ * A `fedmsg-notify-config` graphical interface that lets you filter which
    messages to display
 
 
