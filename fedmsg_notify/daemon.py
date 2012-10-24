@@ -163,6 +163,9 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
     @dbus.service.method(bus_name)
     def Disable(self, *args, **kw):
+        self.__del__()
+
+    def __del__(self):
         for icon, filename in self._icon_cache.items():
             try:
                 os.unlink(filename)
