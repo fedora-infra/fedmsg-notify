@@ -173,6 +173,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
                 pass
         self.hub.close()
         Notify.Notification.new("fedmsg", "deactivated", "").show()
+        Notify.uninit()
         reactor.stop()
 
 
