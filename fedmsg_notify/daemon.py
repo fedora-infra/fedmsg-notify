@@ -135,12 +135,13 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     def show_notification(self, topic, body):
         pretty_text = fedmsg.text.msg2repr(body, **self.cfg)
         log.debug(pretty_text)
-        title = fedmsg.text.msg2title(body, **self.cfg)
-        subtitle = fedmsg.text.msg2subtitle(body, **self.cfg)
-        link = fedmsg.text.msg2link(body, **self.cfg)
-        icon = self.get_icon(fedmsg.text.msg2icon(body, **self.cfg))
+        title = fedmsg.text.msg2title(body, **self.cfg) or ''
+        subtitle = fedmsg.text.msg2subtitle(body, **self.cfg) or ''
+        link = fedmsg.text.msg2link(body, **self.cfg) or ''
+        icon = self.get_icon(fedmsg.text.msg2icon(body, **self.cfg)) or ''
         secondary_icon = self.get_icon(
-            fedmsg.text.msg2secondary_icon(body, **self.cfg))
+            fedmsg.text.msg2secondary_icon(body, **self.cfg)) or ''
+
         note = Notify.Notification.new(title, subtitle + ' ' + link, icon)
         if secondary_icon:
             note.set_hint_string('image-path', secondary_icon)
