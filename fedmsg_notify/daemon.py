@@ -52,6 +52,8 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     topic = 'org.fedoraproject.*'
     config_key = 'fedmsg.consumers.notifyconsumer.enabled'
     bus_name = 'org.fedoraproject.fedmsg.notify'
+    msg_received_signal = 'org.fedoraproject.fedmsg.notify.MessageReceived'
+
     filters = []  # A list of regex filters from the fedmsg text processors
     _object_path = '/%s' % bus_name.replace('.', '/')
     _icon_cache = {}
@@ -66,6 +68,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
     def __init__(self):
         self.settings = Gio.Settings.new(self.bus_name)
+        self.session_bus = dbus.SessionBus()
         self.connect_signal_handlers()
 
         self.cfg = fedmsg.config.load_config(None, [])
@@ -92,7 +95,6 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
         fedmsg.consumers.FedmsgConsumer.__init__(self, moksha.hub._hub)
 
-        self.session_bus = dbus.SessionBus()
         bus_name = dbus.service.BusName(self.bus_name, bus=self.session_bus)
         dbus.service.Object.__init__(self, bus_name, self._object_path)
 
@@ -123,6 +125,14 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
             log.debug("Message to %s didn't match filters" % topic)
             return
 
+        self.MessageReceived(topic, json.dumps(body))
+        self.show_notification(topic, body)
+
+    @dbus.service.signal(dbus_interface=bus_name, signature='ss')
+    def MessageReceived(self, topic, body):
+        log.debug('Sending dbus signal to %s' % self.msg_received_signal)
+
+    def show_notification(self, topic, body):
         pretty_text = fedmsg.text.msg2repr(body, **self.cfg)
         log.debug(pretty_text)
         title = fedmsg.text.msg2title(body, **self.cfg)
