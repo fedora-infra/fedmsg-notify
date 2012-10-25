@@ -50,9 +50,9 @@ class FedmsgListener(object):
         dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
         self.bus = dbus.SessionBus()
         self.bus.add_signal_receiver(self.consume,
-                                    signal_name='MessageReceived',
-                                    dbus_interface='org.fedoraproject.fedmsg.notify',
-                                    path='/org/fedoraproject/fedmsg/notify')
+                                     signal_name='MessageReceived',
+                                     dbus_interface='org.fedoraproject.fedmsg.notify',
+                                     path='/org/fedoraproject/fedmsg/notify')
 
     def consume(self, topic, body):
         body = json.loads(body)
