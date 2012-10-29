@@ -6,5 +6,10 @@
       <summary>fedmsg-notify service enabled</summary>
       <description>Whether or not the fedmsg-notify service should be running</description>
     </key>
+    <key type="s" name="enabled-filters">
+      <default>''</default>
+      <summary>a list of enabled service filters</summary>
+      <description>A JSONified list of fedmsg text processor __name__'s which we will filter all messages again</description>
+    </key>
   </schema>
 </schemalist>

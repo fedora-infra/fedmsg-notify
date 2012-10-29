@@ -21,6 +21,7 @@ gtk3reactor.install()
 from twisted.internet import reactor
 
 import os
+import json
 import urllib
 import logging
 import dbus
@@ -30,7 +31,7 @@ import moksha.hub
 import fedmsg.text
 import fedmsg.consumers
 
-from gi.repository import Notify
+from gi.repository import Notify, Gio
 
 log = logging.getLogger('moksha.hub')
 
@@ -51,9 +52,12 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     topic = 'org.fedoraproject.*'
     config_key = 'fedmsg.consumers.notifyconsumer.enabled'
     bus_name = 'org.fedoraproject.fedmsg.notify'
-    _object_path = '/%s' % bus_name.replace('.', '/')
-    _icon_cache = {}
+    msg_received_signal = 'org.fedoraproject.fedmsg.notify.MessageReceived'
+    filters = []  # A list of regex filters from the fedmsg text processors
+    enabled = False
 
+    _icon_cache = {}
+    _object_path = '/%s' % bus_name.replace('.', '/')
     __name__ = "FedmsgNotifyService"
 
     def __call__(self, hub):
@@ -63,6 +67,16 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         return self
 
     def __init__(self):
+        moksha.hub.setup_logger(verbose=True)
+        self.settings = Gio.Settings.new(self.bus_name)
+        if not self.settings.get_boolean('enabled'):
+            log.info('Disabled via %r configuration, exiting...' %
+                     self.config_key)
+            return
+
+        self.session_bus = dbus.SessionBus()
+        self.connect_signal_handlers()
+
         self.cfg = fedmsg.config.load_config(None, [])
         moksha_options = {
             self.config_key: True,
@@ -73,7 +87,8 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         }
         self.cfg.update(moksha_options)
 
-        moksha.hub.setup_logger(verbose=True)
+        fedmsg.text.make_processors(**self.cfg)
+        self.settings_changed(self.settings, 'enabled-filters')
 
         # Despite what fedmsg.config might say about what consumers are enabled
         # and which are not, we're only going to let the central moksha hub know
@@ -85,23 +100,56 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
         fedmsg.consumers.FedmsgConsumer.__init__(self, moksha.hub._hub)
 
-        self.session_bus = dbus.SessionBus()
         bus_name = dbus.service.BusName(self.bus_name, bus=self.session_bus)
         dbus.service.Object.__init__(self, bus_name, self._object_path)
 
         Notify.init("fedmsg")
         Notify.Notification.new("fedmsg", "activated", "").show()
+        self.enabled = True
+
+    def connect_signal_handlers(self):
+        self.setting_conn = self.settings.connect(
+            'changed::enabled-filters', self.settings_changed)
+
+    def settings_changed(self, settings, key):
+        log.debug('Reloading fedmsg text processor filters.')
+        services = settings.get_string(key)
+        if services:
+            services = json.loads(services)
+        filters = []
+        for processor in fedmsg.text.processors:
+            if processor.__name__ in services or services == '':
+                filters.append(processor.__prefix__)
+                log.debug('%s = %s' % (processor.__name__, filters[-1].pattern))
+        self.filters = filters
 
     def consume(self, msg):
         body, topic = msg.get('body'), msg.get('topic')
+        for filter in self.filters:
+            if filter.match(topic):
+                log.debug('Matched topic %s with %s' % (topic, filter.pattern))
+                break
+        else:
+            log.debug("Message to %s didn't match filters" % topic)
+            return
+
+        self.MessageReceived(topic, json.dumps(body))
+        self.show_notification(topic, body)
+
+    @dbus.service.signal(dbus_interface=bus_name, signature='ss')
+    def MessageReceived(self, topic, body):
+        log.debug('Sending dbus signal to %s' % self.msg_received_signal)
+
+    def show_notification(self, topic, body):
         pretty_text = fedmsg.text.msg2repr(body, **self.cfg)
         log.debug(pretty_text)
-        title = fedmsg.text.msg2title(body, **self.cfg)
-        subtitle = fedmsg.text.msg2subtitle(body, **self.cfg)
-        link = fedmsg.text.msg2link(body, **self.cfg)
-        icon = self.get_icon(fedmsg.text.msg2icon(body, **self.cfg))
+        title = fedmsg.text.msg2title(body, **self.cfg) or ''
+        subtitle = fedmsg.text.msg2subtitle(body, **self.cfg) or ''
+        link = fedmsg.text.msg2link(body, **self.cfg) or ''
+        icon = self.get_icon(fedmsg.text.msg2icon(body, **self.cfg)) or ''
         secondary_icon = self.get_icon(
-            fedmsg.text.msg2secondary_icon(body, **self.cfg))
+            fedmsg.text.msg2secondary_icon(body, **self.cfg)) or ''
+
         note = Notify.Notification.new(title, subtitle + ' ' + link, icon)
         if secondary_icon:
             note.set_hint_string('image-path', secondary_icon)
@@ -119,10 +167,13 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
     @dbus.service.method(bus_name)
     def Enable(self, *args, **kw):
-        """ A noop method called by the gui to load this service """
+        """ A noop method called to activate this service over dbus """
 
     @dbus.service.method(bus_name)
     def Disable(self, *args, **kw):
+        self.__del__()
+
+    def __del__(self):
         for icon, filename in self._icon_cache.items():
             try:
                 os.unlink(filename)
@@ -130,12 +181,16 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
                 pass
         self.hub.close()
         Notify.Notification.new("fedmsg", "deactivated", "").show()
+        Notify.uninit()
+        self.enabled = False
+        log.info('Exiting...')
         reactor.stop()
 
 
 def main():
-    FedmsgNotifyService()
-    reactor.run()
+    service = FedmsgNotifyService()
+    if service.enabled:
+        reactor.run()
 
 if __name__ == '__main__':
     main()
