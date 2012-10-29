@@ -49,8 +49,8 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         self.all_toggle_label.set_text("Fedmsg Desktop Notifications")
         self.grid = Gtk.Grid()
         self.grid.set_column_spacing(10)
-        self.grid.attach(self.all_toggle_label, 1, 0, 1, 1)
-        self.grid.attach(self.all_switch, 0, 0, 1, 1)
+        self.grid.attach(self.all_switch, 1, 0, 1, 1)
+        self.grid.attach(self.all_toggle_label, 0, 0, 1, 1)
         self.add(self.grid)
 
         self.scan_text_processors()
