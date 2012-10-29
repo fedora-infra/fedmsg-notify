@@ -53,11 +53,11 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     config_key = 'fedmsg.consumers.notifyconsumer.enabled'
     bus_name = 'org.fedoraproject.fedmsg.notify'
     msg_received_signal = 'org.fedoraproject.fedmsg.notify.MessageReceived'
-
     filters = []  # A list of regex filters from the fedmsg text processors
-    _object_path = '/%s' % bus_name.replace('.', '/')
-    _icon_cache = {}
+    enabled = False
 
+    _icon_cache = {}
+    _object_path = '/%s' % bus_name.replace('.', '/')
     __name__ = "FedmsgNotifyService"
 
     def __call__(self, hub):
@@ -67,7 +67,13 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         return self
 
     def __init__(self):
+        moksha.hub.setup_logger(verbose=True)
         self.settings = Gio.Settings.new(self.bus_name)
+        if not self.settings.get_boolean('enabled'):
+            log.info('Disabled via %r configuration, exiting...' %
+                     self.config_key)
+            return
+
         self.session_bus = dbus.SessionBus()
         self.connect_signal_handlers()
 
@@ -81,7 +87,6 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         }
         self.cfg.update(moksha_options)
 
-        moksha.hub.setup_logger(verbose=True)
         fedmsg.text.make_processors(**self.cfg)
         self.settings_changed(self.settings, 'enabled-filters')
 
@@ -100,6 +105,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
         Notify.init("fedmsg")
         Notify.Notification.new("fedmsg", "activated", "").show()
+        self.enabled = True
 
     def connect_signal_handlers(self):
         self.setting_conn = self.settings.connect(
@@ -176,12 +182,15 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         self.hub.close()
         Notify.Notification.new("fedmsg", "deactivated", "").show()
         Notify.uninit()
+        self.enabled = False
+        log.info('Exiting...')
         reactor.stop()
 
 
 def main():
-    FedmsgNotifyService()
-    reactor.run()
+    service = FedmsgNotifyService()
+    if service.enabled:
+        reactor.run()
 
 if __name__ == '__main__':
     main()
