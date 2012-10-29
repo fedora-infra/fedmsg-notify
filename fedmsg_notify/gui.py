@@ -47,13 +47,14 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         self.all_switch = Gtk.Switch()
         self.all_toggle_label = Gtk.Label()
         self.all_toggle_label.set_text("Fedmsg Desktop Notifications")
+        self.all_toggle_label.set_alignment(0, 0)
         self.grid = Gtk.Grid()
         self.grid.set_column_spacing(10)
-        self.grid.attach(self.all_switch, 1, 0, 1, 1)
         self.grid.attach(self.all_toggle_label, 0, 0, 1, 1)
+        self.grid.attach(self.all_switch, 1, 0, 1, 1)
         self.add(self.grid)
 
-        self.scan_text_processors()
+        self.populate_text_processors()
         self.connect_signal_handlers()
 
         enabled = self.settings.get_boolean('enabled')
@@ -66,7 +67,7 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
             self.all_switch.set_active(True)
             self.connect_signal_handlers()
 
-    def scan_text_processors(self):
+    def populate_text_processors(self):
         """ Create an on/off switch for each fedmsg text processor """
         top_label = self.all_toggle_label
         top_switch = self.all_switch
@@ -74,6 +75,7 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         for processor in fedmsg.text.processors:
             label = Gtk.Label()
             label.set_text(processor.__obj__)
+            label.set_alignment(0, 0)
             switch = Gtk.Switch()
             if self.enabled_filters:
                 if processor.__name__ in self.enabled_filters:
