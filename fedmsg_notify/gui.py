@@ -107,6 +107,7 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         self.toggle_service(button.get_active())
 
     def toggle_service(self, state):
+        self.settings.set_boolean('enabled', state)
         try:
             notify_obj = self.bus.get_object(self.bus_name, self.obj_path)
         except dbus.exceptions.DBusException, e:
@@ -120,7 +121,6 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
             notify_iface.Disable()
         self.all_switch.set_active(state)
         self.disconnect_signal_handlers()
-        self.settings.set_boolean('enabled', state)
         self.connect_signal_handlers()
 
     def connect_signal_handlers(self):
