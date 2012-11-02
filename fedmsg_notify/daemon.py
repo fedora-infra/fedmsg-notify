@@ -75,6 +75,10 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
             return
 
         self.session_bus = dbus.SessionBus()
+        if self.session_bus.name_has_owner(self.bus_name):
+            log.info('Daemon already running. Exiting...')
+            return
+
         self.connect_signal_handlers()
 
         self.cfg = fedmsg.config.load_config(None, [])
@@ -179,6 +183,8 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
                 os.unlink(filename)
             except OSError:
                 pass
+        if not self.enabled:
+            return
         self.hub.close()
         Notify.Notification.new("fedmsg", "deactivated", "").show()
         Notify.uninit()
