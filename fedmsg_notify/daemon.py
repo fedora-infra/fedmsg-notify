@@ -183,6 +183,8 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
                 os.unlink(filename)
             except OSError:
                 pass
+        if not self.enabled:
+            return
         self.hub.close()
         Notify.Notification.new("fedmsg", "deactivated", "").show()
         Notify.uninit()
