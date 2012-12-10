@@ -51,7 +51,7 @@ class ReportedBugsFilter(Filter):
 
     def match(self, msg, processor):
         """ Check if this update fixes and of our bugs """
-        if '.bodhi.' in msg['topic']:
+        if processor.__name__ == 'Bodhi':
             update = msg['msg'].get('update')
             if update:
                 bugs = [bug['bz_id'] for bug in update['bugs']]
