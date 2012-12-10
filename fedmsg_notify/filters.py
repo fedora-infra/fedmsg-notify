@@ -96,6 +96,7 @@ class InstalledPackageFilter(Filter):
     def __init__(self, settings):
         import yum
         yb = yum.YumBase()
+        yb.doConfigSetup(init_plugins=False)
         self.packages = [pkg.base_package_name for pkg in
                          yb.doPackageLists(pkgnarrow='installed')]
 
