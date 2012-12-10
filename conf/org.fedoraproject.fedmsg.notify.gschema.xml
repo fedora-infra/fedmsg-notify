@@ -9,7 +9,7 @@
     <key type="s" name="enabled-filters">
       <default>''</default>
       <summary>a list of enabled service filters</summary>
-      <description>A JSONified list of fedmsg text processor __name__'s which we will filter all messages again</description>
+      <description>A space delimeted string of fedmsg text processor __name__'s which we will filter all messages by</description>
     </key>
     <key type="s" name="usernames">
       <default>''</default>
