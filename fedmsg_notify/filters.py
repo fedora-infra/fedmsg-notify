@@ -65,10 +65,11 @@ class MyPackageFilter(Filter):
     """ Matches messages regarding packages that a given user has ACLs on """
 
     def __init__(self, settings):
-        # TODO: get from gsettings, configurable via the gui
-        username = os.environ['USER']
-        self.packages = [pkg['name'] for pkg in
-                         PackageDB().user_packages(username)['pkgs']]
+        self.usernames = settings.get_string('usernames').split()
+        self.packages = set()
+        for username in self.usernames:
+            for pkg in PackageDB().user_packages(username)['pkgs']:
+                self.packages.add(pkg['name'])
 
     def match(self, msg, processor):
         packages = processor.packages(msg)
@@ -81,11 +82,12 @@ class UsernameFilter(Filter):
     """ Matches messages that contain specific usernames """
 
     def __init__(self, settings):
-        # TODO: get from gsettings, configurable via the gui
-        self.username = os.environ['USER']
+        self.username = settings.get_string('usernames').split()
 
     def match(self, msg, processor):
-        return self.username in processor.usernames(msg)
+        for username in processor.usernames(msg):
+            if username in self.usernames:
+                return True
 
 
 class InstalledPackageFilter(Filter):

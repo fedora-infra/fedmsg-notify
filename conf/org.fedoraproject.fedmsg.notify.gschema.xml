@@ -11,5 +11,15 @@
       <summary>a list of enabled service filters</summary>
       <description>A JSONified list of fedmsg text processor __name__'s which we will filter all messages again</description>
     </key>
+    <key type="s" name="usernames">
+      <default>''</default>
+      <summary>a list of usernames that we want to filter</summary>
+      <description>A space delimeted string of usernames that we want to filter messages by</description>
+    </key>
+    <key type="s" name="packages">
+      <default>''</default>
+      <summary>a list of packages that we want to filter</summary>
+      <description>A space delimeted string of packages that we want to filter messages by</description>
+    </key>
   </schema>
 </schemalist>
