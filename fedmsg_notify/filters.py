@@ -82,7 +82,7 @@ class UsernameFilter(Filter):
     """ Matches messages that contain specific usernames """
 
     def __init__(self, settings):
-        self.username = settings.get_string('usernames').split()
+        self.usernames = settings.get_string('usernames').split()
 
     def match(self, msg, processor):
         for username in processor.usernames(msg):
