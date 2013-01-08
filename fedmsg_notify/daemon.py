@@ -55,6 +55,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     msg_received_signal = 'org.fedoraproject.fedmsg.notify.MessageReceived'
     filters = []  # A list of regex filters from the fedmsg text processors
     enabled = False
+    emit_dbus_signals = None  # Allow us to proxy fedmsg to dbus
 
     _icon_cache = {}
     _object_path = '/%s' % bus_name.replace('.', '/')
@@ -69,6 +70,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     def __init__(self):
         moksha.hub.setup_logger(verbose=True)
         self.settings = Gio.Settings.new(self.bus_name)
+        self.emit_dbus_signals = self.settings.get_boolean('emit-dbus-signals')
         if not self.settings.get_boolean('enabled'):
             log.info('Disabled via %r configuration, exiting...' %
                      self.config_key)
@@ -113,17 +115,22 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
     def connect_signal_handlers(self):
         self.setting_conn = self.settings.connect(
-            'changed::enabled-topics', self.settings_changed)
+            'changed::enabled-filters', self.settings_changed)
+        self.settings.connect('changed::emit-dbus-signals',
+                              self.settings_changed)
 
     def settings_changed(self, settings, key):
         log.debug('Reloading fedmsg text processor filters.')
-        services = settings.get_string(key).split()
-        filters = []
-        for processor in fedmsg.text.processors:
-            if processor.__name__ in services:
-                filters.append(processor.__prefix__)
-                log.debug('%s = %s' % (processor.__name__, filters[-1].pattern))
-        self.filters = filters
+        if key == 'enabled-filters':
+            services = settings.get_string(key).split()
+            filters = []
+            for processor in fedmsg.text.processors:
+                if processor.__name__ in services:
+                    filters.append(processor.__prefix__)
+                    log.debug('%s = %s' % (processor.__name__, filters[-1].pattern))
+            self.filters = filters
+        else:
+            self.emit_dbus_signals = settings.get_boolean('emit-dbus-signals')
 
     def consume(self, msg):
         body, topic = msg.get('body'), msg.get('topic')
@@ -135,7 +142,9 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
             log.debug("Message to %s didn't match filters" % topic)
             return
 
-        self.MessageReceived(topic, json.dumps(body))
+        if self.emit_dbus_signals:
+            self.MessageReceived(topic, json.dumps(body))
+
         self.show_notification(topic, body)
 
     @dbus.service.signal(dbus_interface=bus_name, signature='ss')
