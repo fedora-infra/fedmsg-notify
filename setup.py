@@ -10,6 +10,7 @@ setup(
         description="Consumer for fedmsg that spits out libnotify desktop notifications",
         author="Luke Macken, Ross Delinger",
         author_email="lmacken@redhat.com",
+        url='https://github.com/lmacken/fedmsg-notify',
         license='GPLv3',
         install_requires=requires,
         packages=['fedmsg_notify'],
