@@ -35,7 +35,6 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         self.set_border_width(10)
 
         self.settings = Gio.Settings.new(self.bus_name)
-        self.enabled_topics = self.settings.get_string('enabled-topics').split()
         self.enabled_filters = self.settings.get_string('enabled-filters').split()
 
         self.bus = dbus.SessionBus()
@@ -124,8 +123,8 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
                 self.enabled_filters.append(button.__name__)
         else:
             self.enabled_filters.remove(button.__name__)
-        self.settings.set_string('enabled-topics',
-                                 ' '.join(self.enabled_topics))
+        self.settings.set_string('enabled-filters',
+                                 ' '.join(self.enabled_filters))
 
     def activate_cb(self, button, active):
         self.toggle_service(button.get_active())

@@ -92,7 +92,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         self.cfg.update(moksha_options)
 
         fedmsg.text.make_processors(**self.cfg)
-        self.settings_changed(self.settings, 'enabled-topics')
+        self.settings_changed(self.settings, 'enabled-filters')
 
         # Despite what fedmsg.config might say about what consumers are enabled
         # and which are not, we're only going to let the central moksha hub know

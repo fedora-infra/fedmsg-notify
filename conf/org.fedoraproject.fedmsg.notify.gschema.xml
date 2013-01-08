@@ -6,11 +6,6 @@
       <summary>fedmsg-notify service enabled</summary>
       <description>Whether or not the fedmsg-notify service should be running</description>
     </key>
-    <key type="s" name="enabled-topics">
-      <default>''</default>
-      <summary>a list of enabled fedmsg topic filters</summary>
-      <description>A space delimeted string of fedmsg text processor __name__'s which we will filter all messages by</description>
-    </key>
     <key type="s" name="enabled-filters">
       <default>''</default>
       <summary>a list of enabled fedmsg-notify filters</summary>
