@@ -92,7 +92,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         self.cfg.update(moksha_options)
 
         fedmsg.text.make_processors(**self.cfg)
-        self.settings_changed(self.settings, 'enabled-filters')
+        self.settings_changed(self.settings, 'enabled-topics')
 
         # Despite what fedmsg.config might say about what consumers are enabled
         # and which are not, we're only going to let the central moksha hub know
@@ -113,16 +113,14 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
     def connect_signal_handlers(self):
         self.setting_conn = self.settings.connect(
-            'changed::enabled-filters', self.settings_changed)
+            'changed::enabled-topics', self.settings_changed)
 
     def settings_changed(self, settings, key):
         log.debug('Reloading fedmsg text processor filters.')
-        services = settings.get_string(key)
-        if services:
-            services = json.loads(services)
+        services = settings.get_string(key).split()
         filters = []
         for processor in fedmsg.text.processors:
-            if processor.__name__ in services or services == '':
+            if processor.__name__ in services:
                 filters.append(processor.__prefix__)
                 log.debug('%s = %s' % (processor.__name__, filters[-1].pattern))
         self.filters = filters

@@ -18,7 +18,6 @@
 
 import sys
 import dbus
-import json
 import fedmsg.text
 
 from gi.repository import Gtk, Gio
@@ -34,12 +33,10 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         Gtk.Window.__init__(self, title="fedmsg-notify-config", application=app)
         self.set_default_size(300, 100)
         self.set_border_width(10)
+
         self.settings = Gio.Settings.new(self.bus_name)
-        self.enabled_filters = self.settings.get_string('enabled-filters')
-        if self.enabled_filters:
-            self.enabled_filters = json.loads(self.enabled_filters)
-        else:
-            self.enabled_filters = []
+        self.enabled_topics = self.settings.get_string('enabled-topics').split()
+        self.enabled_filters = self.settings.get_string('enabled-filters').split()
 
         self.bus = dbus.SessionBus()
         running = self.bus.name_has_owner(self.bus_name)
@@ -100,8 +97,8 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
                 self.enabled_filters.append(button.__name__)
         else:
             self.enabled_filters.remove(button.__name__)
-        self.settings.set_string('enabled-filters',
-                                 json.dumps(self.enabled_filters))
+        self.settings.set_string('enabled-topics',
+                                 ' '.join(self.enabled_topics))
 
     def activate_cb(self, button, active):
         self.toggle_service(button.get_active())
