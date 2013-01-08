@@ -33,6 +33,8 @@ import fedmsg.consumers
 
 from gi.repository import Notify, Gio
 
+from filters import filters
+
 log = logging.getLogger('moksha.hub')
 
 
@@ -53,7 +55,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     config_key = 'fedmsg.consumers.notifyconsumer.enabled'
     bus_name = 'org.fedoraproject.fedmsg.notify'
     msg_received_signal = 'org.fedoraproject.fedmsg.notify.MessageReceived'
-    filters = []  # A list of regex filters from the fedmsg text processors
+    service_filters = []  # A list of regex filters from the fedmsg text processors
     enabled = False
     emit_dbus_signals = None  # Allow us to proxy fedmsg to dbus
 
@@ -82,6 +84,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
             return
 
         self.connect_signal_handlers()
+        self.load_filters()
 
         self.cfg = fedmsg.config.load_config(None, [])
         moksha_options = {
@@ -113,6 +116,9 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         Notify.Notification.new("fedmsg", "activated", "").show()
         self.enabled = True
 
+    def load_filters(self):
+        self.filters = [filter(self.settings) for filter in filters]
+
     def connect_signal_handlers(self):
         self.setting_conn = self.settings.connect(
             'changed::enabled-filters', self.settings_changed)
@@ -128,19 +134,25 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
                 if processor.__name__ in services:
                     filters.append(processor.__prefix__)
                     log.debug('%s = %s' % (processor.__name__, filters[-1].pattern))
-            self.filters = filters
+            self.service_filters = filters
         else:
             self.emit_dbus_signals = settings.get_boolean('emit-dbus-signals')
 
     def consume(self, msg):
         body, topic = msg.get('body'), msg.get('topic')
+        processor = fedmsg.text.msg2processor(msg)
         for filter in self.filters:
-            if filter.match(topic):
-                log.debug('Matched topic %s with %s' % (topic, filter.pattern))
+            if filter.match(body, processor):
+                log.debug('Matched topic %s with %s' % (topic, filter))
                 break
         else:
-            log.debug("Message to %s didn't match filters" % topic)
-            return
+            for filter in self.service_filters:
+                if filter.match(topic):
+                    log.debug('Matched topic %s with %s' % (topic, filter.pattern))
+                    break
+            else:
+                log.debug("Message to %s didn't match filters" % topic)
+                return
 
         if self.emit_dbus_signals:
             self.MessageReceived(topic, json.dumps(body))

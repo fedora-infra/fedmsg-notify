@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Fedmsg Notification Daemon
+Exec=fedmsg-notify-daemon
+Terminal=false
+Type=Application
+NoDisplay=true
