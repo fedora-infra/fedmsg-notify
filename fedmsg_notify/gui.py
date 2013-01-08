@@ -41,15 +41,40 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         self.bus = dbus.SessionBus()
         running = self.bus.name_has_owner(self.bus_name)
 
-        self.all_switch = Gtk.Switch()
+        vbox = Gtk.VBox()
+        self.add(vbox)
+
+        # The top grid for our title and main on/off switch
         self.all_toggle_label = Gtk.Label()
         self.all_toggle_label.set_text("Fedmsg Desktop Notifications")
         self.all_toggle_label.set_alignment(0, 0)
+        self.all_switch = Gtk.Switch()
+        self.top_grid = Gtk.Grid()
+        self.top_grid.set_column_spacing(10)
+        self.top_grid.attach(self.all_toggle_label, 0, 0, 1, 1)
+        self.top_grid.attach(self.all_switch, 1, 0, 1, 1)
+        vbox.pack_start(self.top_grid, False, False, 0)
+
+        # Personalized settings
         self.grid = Gtk.Grid()
         self.grid.set_column_spacing(10)
-        self.grid.attach(self.all_toggle_label, 0, 0, 1, 1)
-        self.grid.attach(self.all_switch, 1, 0, 1, 1)
-        self.add(self.grid)
+        self.grid.set_vexpand(True)
+        self.grid.set_hexpand(True)
+
+        # Placeholders
+        self.label_placeholder = Gtk.Label()
+        self.label_placeholder.set_alignment(0, 0)
+        self.grid.attach(self.label_placeholder, 0, 0, 1, 1)
+        self.switch_placeholder = Gtk.Switch()
+        self.grid.attach(self.switch_placeholder, 1, 0, 1, 1)
+
+        # Our tabs
+        self.notebook = Gtk.Notebook()
+        self.notebook.set_vexpand(True)
+        self.notebook.set_hexpand(True)
+        vbox.pack_start(self.notebook, True, True, 0)
+        self.notebook.append_page(self.grid,
+                                  Gtk.Label.new_with_mnemonic('_Topics'))
 
         self.populate_text_processors()
         self.connect_signal_handlers()
@@ -66,8 +91,8 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
 
     def populate_text_processors(self):
         """ Create an on/off switch for each fedmsg text processor """
-        top_label = self.all_toggle_label
-        top_switch = self.all_switch
+        top_label = self.label_placeholder
+        top_switch = self.switch_placeholder
         fedmsg.text.make_processors(**fedmsg.config.load_config(None, []))
         for processor in fedmsg.text.processors:
             label = Gtk.Label()
@@ -89,6 +114,8 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
             top_switch = switch
         if not self.enabled_filters:
             self.enabled_filters = [s.__name__ for s in self._switches]
+        self.grid.remove(self.label_placeholder)
+        self.grid.remove(self.switch_placeholder)
 
     def activate_filter_switch(self, button, active):
         """ Called when the text processor specific filters are selected """
