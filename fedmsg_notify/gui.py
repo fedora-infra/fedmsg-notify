@@ -54,26 +54,39 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         self.top_grid.attach(self.all_switch, 1, 0, 1, 1)
         vbox.pack_start(self.top_grid, False, False, 0)
 
-        # Personalized settings
-        self.grid = Gtk.Grid()
-        self.grid.set_column_spacing(10)
-        self.grid.set_vexpand(True)
-        self.grid.set_hexpand(True)
+        # fedmsg topic grid
+        self.topic_grid = Gtk.Grid()
+        self.topic_grid.set_column_spacing(10)
+        self.topic_grid.set_vexpand(True)
+        self.topic_grid.set_hexpand(True)
+
+        # Advanced filter grid
+        self.advanced_grid = Gtk.Grid()
+        self.advanced_grid.set_column_spacing(10)
+        self.advanced_grid.set_vexpand(True)
+        self.advanced_grid.set_hexpand(True)
 
         # Placeholders
-        self.label_placeholder = Gtk.Label()
-        self.label_placeholder.set_alignment(0, 0)
-        self.grid.attach(self.label_placeholder, 0, 0, 1, 1)
-        self.switch_placeholder = Gtk.Switch()
-        self.grid.attach(self.switch_placeholder, 1, 0, 1, 1)
+        self.topic_label_placeholder = Gtk.Label()
+        self.topic_label_placeholder.set_alignment(0, 0)
+        self.topic_switch_placeholder = Gtk.Switch()
+        self.topic_grid.attach(self.topic_label_placeholder, 0, 0, 1, 1)
+        self.topic_grid.attach(self.topic_switch_placeholder, 1, 0, 1, 1)
+        self.advanced_label_placeholder = Gtk.Label()
+        self.advanced_label_placeholder.set_alignment(0, 0)
+        self.advanced_switch_placeholder = Gtk.Switch()
+        self.advanced_grid.attach(self.advanced_label_placeholder, 0, 0, 1, 1)
+        self.advanced_grid.attach(self.advanced_switch_placeholder, 1, 0, 1, 1)
 
-        # Our tabs
+        # Tabs
         self.notebook = Gtk.Notebook()
         self.notebook.set_vexpand(True)
         self.notebook.set_hexpand(True)
         vbox.pack_start(self.notebook, True, True, 0)
-        self.notebook.append_page(self.grid,
+        self.notebook.append_page(self.topic_grid,
                                   Gtk.Label.new_with_mnemonic('_Topics'))
+        self.notebook.append_page(self.advanced_grid,
+                                  Gtk.Label.new_with_mnemonic('_Advanced'))
 
         self.populate_text_processors()
         self.connect_signal_handlers()
@@ -90,8 +103,8 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
 
     def populate_text_processors(self):
         """ Create an on/off switch for each fedmsg text processor """
-        top_label = self.label_placeholder
-        top_switch = self.switch_placeholder
+        top_label = self.topic_label_placeholder
+        top_switch = self.topic_switch_placeholder
         fedmsg.text.make_processors(**fedmsg.config.load_config(None, []))
         for processor in fedmsg.text.processors:
             label = Gtk.Label()
@@ -105,16 +118,16 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
                 switch.set_active(True)
             switch.__name__ = processor.__name__
             self._switches[switch] = None
-            self.grid.attach_next_to(label, top_label,
+            self.topic_grid.attach_next_to(label, top_label,
                                      Gtk.PositionType.BOTTOM, 1, 1)
-            self.grid.attach_next_to(switch, top_switch,
+            self.topic_grid.attach_next_to(switch, top_switch,
                                      Gtk.PositionType.BOTTOM, 1, 1)
             top_label = label
             top_switch = switch
         if not self.enabled_filters:
             self.enabled_filters = [s.__name__ for s in self._switches]
-        self.grid.remove(self.label_placeholder)
-        self.grid.remove(self.switch_placeholder)
+        self.topic_grid.remove(self.topic_label_placeholder)
+        self.topic_grid.remove(self.topic_switch_placeholder)
 
     def activate_filter_switch(self, button, active):
         """ Called when the text processor specific filters are selected """
