@@ -139,6 +139,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
             self.emit_dbus_signals = settings.get_boolean('emit-dbus-signals')
 
     def consume(self, msg):
+        """ Called by fedmsg (Moksha) with each message as they arrive """
         body, topic = msg.get('body'), msg.get('topic')
         processor = fedmsg.text.msg2processor(msg)
         for filter in self.filters:
