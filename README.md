@@ -18,7 +18,7 @@ Installing
 ----------
 
 Due to a dependency on Twisted's gtk3reactor, fedmsg-notify is currently
-only available on Fedora 18.
+only available on [Fedora 18](https://apps.fedoraproject.org/packages/fedmsg-notify).
 
 ```
 yum -y install fedmsg-notify
