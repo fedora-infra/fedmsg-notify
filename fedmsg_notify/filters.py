@@ -22,6 +22,7 @@ from fedora.client.pkgdb import PackageDB
 
 
 class Filter(object):
+    __description__ = None
 
     def __init__(self, settings):
         self.settings = settings
@@ -35,6 +36,7 @@ class Filter(object):
 
 class ReportedBugsFilter(Filter):
     """ Matches messages that reference bugs that abrt has encountered """
+    __description__ = 'Bugs that you have encountered'
 
     def __init__(self, settings):
         """ Pull bug numbers out of local abrt reports """
@@ -63,6 +65,7 @@ class ReportedBugsFilter(Filter):
 
 class MyPackageFilter(Filter):
     """ Matches messages regarding packages that a given user has ACLs on """
+    __description__ = 'Packages that these users maintain'
 
     def __init__(self, settings):
         self.usernames = settings.get_string('usernames').split()
@@ -80,6 +83,7 @@ class MyPackageFilter(Filter):
 
 class UsernameFilter(Filter):
     """ Matches messages that contain specific usernames """
+    __description__ = 'Messages that reference specific users'
 
     def __init__(self, settings):
         self.usernames = settings.get_string('usernames').split()
@@ -92,6 +96,7 @@ class UsernameFilter(Filter):
 
 class InstalledPackageFilter(Filter):
     """ Matches messages referencing packages that are installed locally """
+    __description__ = 'Packages that you have installed'
 
     def __init__(self, settings):
         import yum
@@ -106,5 +111,9 @@ class InstalledPackageFilter(Filter):
                 return True
 
 
-filters = [MyPackageFilter, ReportedBugsFilter, UsernameFilter,
-           InstalledPackageFilter]
+filters = [
+    ReportedBugsFilter,
+    InstalledPackageFilter,
+    MyPackageFilter,
+    UsernameFilter,
+]
