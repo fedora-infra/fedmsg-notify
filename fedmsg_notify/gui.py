@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with fedmsg-notify.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright (C) 2012 Red Hat, Inc.
+# Copyright (C) 2012, 2013 Red Hat, Inc.
 # Author: Luke Macken <lmacken@redhat.com>
 
 import sys
