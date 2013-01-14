@@ -64,52 +64,38 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         # The top grid for our title and main on/off switch
         self.all_toggle_label = Gtk.Label(halign=Gtk.Align.START, hexpand=True)
         self.all_toggle_label.set_text("Fedmsg Desktop Notifications")
-        self.all_toggle_label.set_alignment(0, 0)
         self.all_switch = Gtk.Switch(halign=Gtk.Align.END)
-        self.top_grid = Gtk.Grid(halign=Gtk.Align.FILL)
-        self.top_grid.set_column_spacing(10)
+        self.top_grid = Gtk.Grid(halign=Gtk.Align.FILL, column_spacing=10)
         self.top_grid.attach(self.all_toggle_label, 0, 0, 1, 1)
         self.top_grid.attach(self.all_switch, 1, 0, 1, 1)
         vbox.pack_start(self.top_grid, False, False, 0)
 
         # fedmsg topic grid
-        self.topic_grid = Gtk.Grid(halign=Gtk.Align.FILL)
-        self.topic_grid.set_column_spacing(10)
-        self.topic_grid.set_margin_top(10)
-        self.topic_grid.set_margin_bottom(10)
-        self.topic_grid.set_margin_left(10)
-        self.topic_grid.set_margin_right(10)
-        self.topic_grid.set_vexpand(True)
-        self.topic_grid.set_hexpand(True)
+        self.topic_grid = Gtk.Grid(halign=Gtk.Align.FILL, column_spacing=10,
+                                   margin_top=10, margin_bottom=10,
+                                   margin_left=10, margin_right=10,
+                                   vexpand=True, hexpand=True)
 
         # Advanced filter grid
-        self.advanced_grid = Gtk.Grid(halign=Gtk.Align.FILL)
-        self.advanced_grid.set_column_spacing(10)
-        self.advanced_grid.set_margin_top(10)
-        self.advanced_grid.set_margin_bottom(10)
-        self.advanced_grid.set_margin_left(10)
-        self.advanced_grid.set_margin_right(10)
-        self.advanced_grid.set_vexpand(True)
-        self.advanced_grid.set_hexpand(True)
+        self.advanced_grid = Gtk.Grid(halign=Gtk.Align.FILL, column_spacing=10,
+                                      margin_top=10, margin_bottom=10,
+                                      margin_left=10, margin_right=10,
+                                      vexpand=True, hexpand=True)
 
         # Placeholders
         self.topic_label_placeholder = Gtk.Label(halign=Gtk.Align.START,
                                                  hexpand=True)
-        self.topic_label_placeholder.set_alignment(0, 0)
         self.topic_switch_placeholder = Gtk.Switch(halign=Gtk.Align.END)
         self.topic_grid.attach(self.topic_label_placeholder, 0, 0, 1, 1)
         self.topic_grid.attach(self.topic_switch_placeholder, 1, 0, 1, 1)
         self.advanced_label_placeholder = Gtk.Label(halign=Gtk.Align.START,
                                                     hexpand=True)
-        self.advanced_label_placeholder.set_alignment(0, 0)
         self.advanced_switch_placeholder = Gtk.Switch(halign=Gtk.Align.END)
         self.advanced_grid.attach(self.advanced_label_placeholder, 0, 0, 1, 1)
         self.advanced_grid.attach(self.advanced_switch_placeholder, 1, 0, 1, 1)
 
         # Tabs
-        self.notebook = Gtk.Notebook()
-        self.notebook.set_vexpand(True)
-        self.notebook.set_hexpand(True)
+        self.notebook = Gtk.Notebook(vexpand=True, hexpand=True)
         vbox.pack_start(self.notebook, True, True, 0)
         self.notebook.append_page(self.topic_grid,
                                   Gtk.Label.new_with_mnemonic('_Topics'))
@@ -124,9 +110,8 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         for processor in fedmsg.text.processors:
             label = Gtk.Label(halign=Gtk.Align.START, hexpand=True)
             label.set_text(processor.__obj__)
-            label.set_alignment(0, 0)
-            switch = Gtk.Switch(halign=Gtk.Align.END)
-            switch.set_active(processor.__name__ in self.enabled_filters)
+            switch = Gtk.Switch(halign=Gtk.Align.END, active=processor.__name__
+                                in self.enabled_filters)
             switch.__name__ = processor.__name__
             self._switches[switch] = None
             self.topic_grid.attach_next_to(label, top_label,
@@ -147,10 +132,8 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         for filter in filters:
             label = Gtk.Label(halign=Gtk.Align.START, hexpand=True)
             label.set_text(filter.__description__)
-            label.set_alignment(0, 0)
-            switch = Gtk.Switch(halign=Gtk.Align.END)
-            switch.set_active(filter.__name__ in
-                              self.enabled_filters)
+            switch = Gtk.Switch(halign=Gtk.Align.END, active=filter.__name__ in
+                                self.enabled_filters)
             switch.__name__ = filter.__name__
             self._switches[switch] = None
             self.advanced_grid.attach_next_to(label, top_label,
