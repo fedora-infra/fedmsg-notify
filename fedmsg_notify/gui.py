@@ -22,6 +22,8 @@ import fedmsg.text
 
 from gi.repository import Gtk, Gio
 
+from .filters import filters
+
 
 class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
     bus_name = 'org.fedoraproject.fedmsg.notify'
@@ -40,6 +42,22 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         self.bus = dbus.SessionBus()
         running = self.bus.name_has_owner(self.bus_name)
 
+        self.build_gui()
+        self.populate_text_processors()
+        self.populate_advanced_filters()
+        self.connect_signal_handlers()
+
+        enabled = self.settings.get_boolean('enabled')
+        if enabled and not running:
+            self.toggle_service(True)
+        elif running and not enabled:
+            self.toggle_service(False)
+        elif enabled and running:
+            self.disconnect_signal_handlers()
+            self.all_switch.set_active(True)
+            self.connect_signal_handlers()
+
+    def build_gui(self):
         vbox = Gtk.VBox()
         self.add(vbox)
 
@@ -88,19 +106,6 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         self.notebook.append_page(self.advanced_grid,
                                   Gtk.Label.new_with_mnemonic('_Advanced'))
 
-        self.populate_text_processors()
-        self.connect_signal_handlers()
-
-        enabled = self.settings.get_boolean('enabled')
-        if enabled and not running:
-            self.toggle_service(True)
-        elif running and not enabled:
-            self.toggle_service(False)
-        elif enabled and running:
-            self.disconnect_signal_handlers()
-            self.all_switch.set_active(True)
-            self.connect_signal_handlers()
-
     def populate_text_processors(self):
         """ Create an on/off switch for each fedmsg text processor """
         top_label = self.topic_label_placeholder
@@ -111,23 +116,43 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
             label.set_text(processor.__obj__)
             label.set_alignment(0, 0)
             switch = Gtk.Switch()
-            if self.enabled_filters:
-                if processor.__name__ in self.enabled_filters:
-                    switch.set_active(True)
-            else:
-                switch.set_active(True)
+            switch.set_active(processor.__name__ in self.enabled_filters)
             switch.__name__ = processor.__name__
             self._switches[switch] = None
             self.topic_grid.attach_next_to(label, top_label,
-                                     Gtk.PositionType.BOTTOM, 1, 1)
+                                           Gtk.PositionType.BOTTOM, 1, 1)
             self.topic_grid.attach_next_to(switch, top_switch,
-                                     Gtk.PositionType.BOTTOM, 1, 1)
+                                           Gtk.PositionType.BOTTOM, 1, 1)
             top_label = label
             top_switch = switch
         if not self.enabled_filters:
             self.enabled_filters = [s.__name__ for s in self._switches]
         self.topic_grid.remove(self.topic_label_placeholder)
         self.topic_grid.remove(self.topic_switch_placeholder)
+
+    def populate_advanced_filters(self):
+        """ Create an on/off switch for each advanced filters """
+        top_label = self.advanced_label_placeholder
+        top_switch = self.advanced_switch_placeholder
+        for filter in filters:
+            label = Gtk.Label()
+            label.set_text(filter.__description__)
+            label.set_alignment(0, 0)
+            switch = Gtk.Switch()
+            switch.set_active(filter.__name__ in
+                              self.enabled_filters)
+            switch.__name__ = filter.__name__
+            self._switches[switch] = None
+            self.advanced_grid.attach_next_to(label, top_label,
+                                              Gtk.PositionType.BOTTOM, 1, 1)
+            self.advanced_grid.attach_next_to(switch, top_switch,
+                                              Gtk.PositionType.BOTTOM, 1, 1)
+            top_label = label
+            top_switch = switch
+        if not self.enabled_filters:
+            self.enabled_filters = [s.__name__ for s in self._switches]
+        self.advanced_grid.remove(self.advanced_label_placeholder)
+        self.advanced_grid.remove(self.advanced_switch_placeholder)
 
     def activate_filter_switch(self, button, active):
         """ Called when the text processor specific filters are selected """
