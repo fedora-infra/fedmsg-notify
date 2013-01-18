@@ -8,18 +8,18 @@
     </key>
     <key type="s" name="enabled-filters">
       <default>''</default>
-      <summary>a list of enabled service filters</summary>
-      <description>A space delimeted string of fedmsg text processor __name__'s which we will filter all messages by</description>
+      <summary>a list of enabled fedmsg-notify filters</summary>
+      <description>A space delimeted string of fedmsg-notify filters names that are enabled</description>
     </key>
-    <key type="s" name="usernames">
-      <default>''</default>
-      <summary>a list of usernames that we want to filter</summary>
-      <description>A space delimeted string of usernames that we want to filter messages by</description>
+    <key type="b" name="emit-dbus-signals">
+      <default>true</default>
+      <summary>Emit signals for each message</summary>
+      <description>This tells fedmsg-notify to emit a DBus signal for each message received from fedmsg. This allows desktop applications to consume messages without each having seperate connections to the bus.</description>
     </key>
-    <key type="s" name="packages">
-      <default>''</default>
-      <summary>a list of packages that we want to filter</summary>
-      <description>A space delimeted string of packages that we want to filter messages by</description>
+    <key type="s" name="filter-settings">
+      <default>'{}'</default>
+      <summary>User configured filter settings</summary>
+      <description>A JSON dictionary of advanced filter settings.</description>
     </key>
   </schema>
 </schemalist>

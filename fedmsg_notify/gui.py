@@ -13,14 +13,17 @@
 # You should have received a copy of the GNU General Public License
 # along with fedmsg-notify.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright (C) 2012 Red Hat, Inc.
+# Copyright (C) 2012, 2013 Red Hat, Inc.
 # Author: Luke Macken <lmacken@redhat.com>
 
 import sys
 import dbus
+import json
 import fedmsg.text
 
 from gi.repository import Gtk, Gio
+
+from .filters import filters
 
 
 class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
@@ -33,23 +36,19 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         Gtk.Window.__init__(self, title="fedmsg-notify-config", application=app)
         self.set_default_size(300, 100)
         self.set_border_width(10)
+
         self.settings = Gio.Settings.new(self.bus_name)
         self.enabled_filters = self.settings.get_string('enabled-filters').split()
+        self.filter_settings = self.settings.get_string('filter-settings')
+        if self.filter_settings:
+            self.filter_settings = json.loads(self.filter_settings)
 
         self.bus = dbus.SessionBus()
         running = self.bus.name_has_owner(self.bus_name)
 
-        self.all_switch = Gtk.Switch()
-        self.all_toggle_label = Gtk.Label()
-        self.all_toggle_label.set_text("Fedmsg Desktop Notifications")
-        self.all_toggle_label.set_alignment(0, 0)
-        self.grid = Gtk.Grid()
-        self.grid.set_column_spacing(10)
-        self.grid.attach(self.all_toggle_label, 0, 0, 1, 1)
-        self.grid.attach(self.all_switch, 1, 0, 1, 1)
-        self.add(self.grid)
-
+        self.build_gui()
         self.populate_text_processors()
+        self.populate_advanced_filters()
         self.connect_signal_handlers()
 
         enabled = self.settings.get_boolean('enabled')
@@ -62,31 +61,108 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
             self.all_switch.set_active(True)
             self.connect_signal_handlers()
 
+    def build_gui(self):
+        vbox = Gtk.VBox()
+        self.add(vbox)
+
+        # The top grid for our title and main on/off switch
+        self.all_toggle_label = Gtk.Label(halign=Gtk.Align.START, hexpand=True)
+        self.all_toggle_label.set_text("Fedmsg Desktop Notifications")
+        self.all_switch = Gtk.Switch(halign=Gtk.Align.END)
+        self.top_grid = Gtk.Grid(halign=Gtk.Align.FILL, column_spacing=10)
+        self.top_grid.attach(self.all_toggle_label, 0, 0, 1, 1)
+        self.top_grid.attach(self.all_switch, 1, 0, 1, 1)
+        vbox.pack_start(self.top_grid, False, False, 0)
+
+        # fedmsg topic grid
+        self.topic_grid = Gtk.Grid(halign=Gtk.Align.FILL, column_spacing=10,
+                                   margin_top=10, margin_bottom=10,
+                                   margin_left=10, margin_right=10,
+                                   vexpand=True, hexpand=True)
+
+        # Advanced filter grid
+        self.advanced_grid = Gtk.Grid(halign=Gtk.Align.FILL, column_spacing=10,
+                                      margin_top=10, margin_bottom=10,
+                                      margin_left=10, margin_right=10,
+                                      vexpand=True, hexpand=True)
+
+        # Placeholders
+        self.topic_label_placeholder = Gtk.Label(halign=Gtk.Align.START,
+                                                 hexpand=True)
+        self.topic_switch_placeholder = Gtk.Switch(halign=Gtk.Align.END)
+        self.topic_grid.attach(self.topic_label_placeholder, 0, 0, 1, 1)
+        self.topic_grid.attach(self.topic_switch_placeholder, 1, 0, 1, 1)
+        self.advanced_label_placeholder = Gtk.Label(halign=Gtk.Align.START,
+                                                    hexpand=True)
+        self.advanced_switch_placeholder = Gtk.Switch(halign=Gtk.Align.END)
+        self.advanced_grid.attach(self.advanced_label_placeholder, 0, 0, 1, 1)
+        self.advanced_grid.attach(self.advanced_switch_placeholder, 1, 0, 1, 1)
+
+        # Tabs
+        self.notebook = Gtk.Notebook(vexpand=True, hexpand=True)
+        vbox.pack_start(self.notebook, True, True, 0)
+        self.notebook.append_page(self.topic_grid,
+                                  Gtk.Label.new_with_mnemonic('_Topics'))
+        self.notebook.append_page(self.advanced_grid,
+                                  Gtk.Label.new_with_mnemonic('_Advanced'))
+
     def populate_text_processors(self):
         """ Create an on/off switch for each fedmsg text processor """
-        top_label = self.all_toggle_label
-        top_switch = self.all_switch
+        top_label = self.topic_label_placeholder
+        top_switch = self.topic_switch_placeholder
         fedmsg.text.make_processors(**fedmsg.config.load_config(None, []))
         for processor in fedmsg.text.processors:
-            label = Gtk.Label()
+            label = Gtk.Label(halign=Gtk.Align.START, hexpand=True)
             label.set_text(processor.__obj__)
-            label.set_alignment(0, 0)
-            switch = Gtk.Switch()
-            if self.enabled_filters:
-                if processor.__name__ in self.enabled_filters:
-                    switch.set_active(True)
-            else:
-                switch.set_active(True)
+            switch = Gtk.Switch(halign=Gtk.Align.END, active=processor.__name__
+                                in self.enabled_filters)
             switch.__name__ = processor.__name__
             self._switches[switch] = None
-            self.grid.attach_next_to(label, top_label,
-                                     Gtk.PositionType.BOTTOM, 1, 1)
-            self.grid.attach_next_to(switch, top_switch,
-                                     Gtk.PositionType.BOTTOM, 1, 1)
+            self.topic_grid.attach_next_to(label, top_label,
+                                           Gtk.PositionType.BOTTOM, 1, 1)
+            self.topic_grid.attach_next_to(switch, top_switch,
+                                           Gtk.PositionType.BOTTOM, 1, 1)
             top_label = label
             top_switch = switch
         if not self.enabled_filters:
             self.enabled_filters = [s.__name__ for s in self._switches]
+        self.topic_grid.remove(self.topic_label_placeholder)
+        self.topic_grid.remove(self.topic_switch_placeholder)
+
+    def populate_advanced_filters(self):
+        """ Create an on/off switch for each advanced filters """
+        top_label = self.advanced_label_placeholder
+        top_switch = self.advanced_switch_placeholder
+        for filter in filters:
+            label = Gtk.Label(halign=Gtk.Align.START, hexpand=True)
+            label.set_text(filter.__description__)
+            switch = Gtk.Switch(halign=Gtk.Align.END, active=filter.__name__ in
+                                self.enabled_filters)
+            switch.__name__ = filter.__name__
+            self._switches[switch] = None
+            self.advanced_grid.attach_next_to(label, top_label,
+                                              Gtk.PositionType.BOTTOM, 1, 1)
+            self.advanced_grid.attach_next_to(switch, top_switch,
+                                              Gtk.PositionType.BOTTOM, 1, 1)
+            top_label = label
+            top_switch = switch
+            if filter.__user_entry__:
+                label = Gtk.Label(halign=Gtk.Align.CENTER, hexpand=True)
+                label.set_text(filter.__user_entry__ + ':')
+                entry = Gtk.Entry(halign=Gtk.Align.END)
+                entry.set_text(self.filter_settings.get(filter.__name__, ''))
+                entry.connect('notify::text', self.entry_modified)
+                entry.__filter__ = filter
+                self.advanced_grid.attach_next_to(label, top_label,
+                                                  Gtk.PositionType.BOTTOM, 1, 1)
+                self.advanced_grid.attach_next_to(entry, top_switch,
+                                                  Gtk.PositionType.BOTTOM, 1, 1)
+                top_label = label
+                top_switch = entry
+        if not self.enabled_filters:
+            self.enabled_filters = [s.__name__ for s in self._switches]
+        self.advanced_grid.remove(self.advanced_label_placeholder)
+        self.advanced_grid.remove(self.advanced_switch_placeholder)
 
     def activate_filter_switch(self, button, active):
         """ Called when the text processor specific filters are selected """
@@ -144,6 +220,9 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         self.all_switch.set_active(settings.get_boolean(key))
         self.connect_signal_handlers()
 
+    def entry_modified(self, entry, text):
+        self.filter_settings[entry.__filter__.__name__] = entry.get_text()
+        self.settings.set_string('filter-settings', json.dumps(self.filter_settings))
 
 class FedmsgNotifyConfigApp(Gtk.Application):
 

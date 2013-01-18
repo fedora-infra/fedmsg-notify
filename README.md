@@ -18,7 +18,7 @@ Installing
 ----------
 
 Due to a dependency on Twisted's gtk3reactor, fedmsg-notify is currently
-only available on Fedora 18.
+only available on [Fedora 18](https://apps.fedoraproject.org/packages/fedmsg-notify).
 
 ```
 yum -y install fedmsg-notify
@@ -28,11 +28,17 @@ yum -y install fedmsg-notify
 Writing applications that consume fedmsg messages through DBus
 --------------------------------------------------------------
 
-The `fedmsg-notify-daemon` fires off a
+By default, the `fedmsg-notify-daemon` fires off a
 `org.fedoraproject.fedmsg.notify.MessageReceived` DBus signal upon each
 message, allowing you to easily consume them in your desktop application.
 
-Here is a basic example of listening to fedmsg-notify signals over DBus.
+This behavior can be disabled by running:
+
+```
+gsettings set org.fedoraproject.fedmsg.notify emit-dbus-signals false
+```
+
+Here is an example of a basic Python program that listens to fedmsg-notify signals over DBus.
 
 ```python
 
