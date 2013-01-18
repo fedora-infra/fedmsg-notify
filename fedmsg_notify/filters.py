@@ -23,6 +23,7 @@ from fedora.client.pkgdb import PackageDB
 
 class Filter(object):
     __description__ = None
+    __user_entry__ = False
 
     def __init__(self, settings):
         self.settings = settings
@@ -66,6 +67,7 @@ class ReportedBugsFilter(Filter):
 class MyPackageFilter(Filter):
     """ Matches messages regarding packages that a given user has ACLs on """
     __description__ = 'Packages that these users maintain'
+    __user_entry__ = True
 
     def __init__(self, settings):
         self.usernames = settings.get_string('usernames').split()
@@ -84,6 +86,7 @@ class MyPackageFilter(Filter):
 class UsernameFilter(Filter):
     """ Matches messages that contain specific usernames """
     __description__ = 'Messages that reference specific users'
+    __user_entry__ = True
 
     def __init__(self, settings):
         self.usernames = settings.get_string('usernames').split()

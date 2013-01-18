@@ -142,6 +142,16 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
                                               Gtk.PositionType.BOTTOM, 1, 1)
             top_label = label
             top_switch = switch
+            if filter.__user_entry__:
+                label = Gtk.Label(halign=Gtk.Align.START, hexpand=True)
+                entry = Gtk.Entry(halign=Gtk.Align.END)
+                entry.__filter__ = filter
+                self.advanced_grid.attach_next_to(label, top_label,
+                                                  Gtk.PositionType.BOTTOM, 1, 1)
+                self.advanced_grid.attach_next_to(entry, top_switch,
+                                                  Gtk.PositionType.BOTTOM, 1, 1)
+                top_label = label
+                top_switch = entry
         if not self.enabled_filters:
             self.enabled_filters = [s.__name__ for s in self._switches]
         self.advanced_grid.remove(self.advanced_label_placeholder)
