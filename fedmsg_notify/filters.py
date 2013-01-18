@@ -98,6 +98,20 @@ class UsernameFilter(Filter):
                 return True
 
 
+class PackageFilter(Filter):
+    """ Matches messages referencing packages that are installed locally """
+    __description__ = 'Messages that reference specific packages'
+    __user_entry__ = 'Packages'
+
+    def __init__(self, settings):
+        self.packages = settings.replace(',', ' ').split()
+
+    def match(self, msg, processor):
+        for package in processor.packages(msg):
+            if package in self.packages:
+                return True
+
+
 class InstalledPackageFilter(Filter):
     """ Matches messages referencing packages that are installed locally """
     __description__ = 'Packages that you have installed'
@@ -117,6 +131,7 @@ class InstalledPackageFilter(Filter):
 filters = [
     ReportedBugsFilter,
     InstalledPackageFilter,
+    PackageFilter,
     MyPackageFilter,
     UsernameFilter,
 ]
