@@ -18,6 +18,7 @@
 
 import sys
 import dbus
+import json
 import fedmsg.text
 
 from gi.repository import Gtk, Gio
@@ -38,6 +39,9 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
 
         self.settings = Gio.Settings.new(self.bus_name)
         self.enabled_filters = self.settings.get_string('enabled-filters').split()
+        self.filter_settings = self.settings.get_string('filter-settings')
+        if self.filter_settings:
+            self.filter_settings = json.loads(self.filter_settings)
 
         self.bus = dbus.SessionBus()
         running = self.bus.name_has_owner(self.bus_name)
@@ -143,8 +147,11 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
             top_label = label
             top_switch = switch
             if filter.__user_entry__:
-                label = Gtk.Label(halign=Gtk.Align.START, hexpand=True)
+                label = Gtk.Label(halign=Gtk.Align.CENTER, hexpand=True)
+                label.set_text(filter.__user_entry__ + ':')
                 entry = Gtk.Entry(halign=Gtk.Align.END)
+                entry.set_text(self.filter_settings.get(filter.__name__, ''))
+                entry.connect('notify::text', self.entry_modified)
                 entry.__filter__ = filter
                 self.advanced_grid.attach_next_to(label, top_label,
                                                   Gtk.PositionType.BOTTOM, 1, 1)
@@ -213,6 +220,9 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         self.all_switch.set_active(settings.get_boolean(key))
         self.connect_signal_handlers()
 
+    def entry_modified(self, entry, text):
+        self.filter_settings[entry.__filter__.__name__] = entry.get_text()
+        self.settings.set_string('filter-settings', json.dumps(self.filter_settings))
 
 class FedmsgNotifyConfigApp(Gtk.Application):
 

@@ -117,12 +117,16 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         self.enabled = True
 
     def load_filters(self):
-        self.filters = [filter(self.settings) for filter in filters]
+        filter_settings = json.loads(self.settings.get_string('filter-settings'))
+        self.filters = [filter(filter_settings.get(filter.__name__, []))
+                        for filter in filters]
 
     def connect_signal_handlers(self):
         self.setting_conn = self.settings.connect(
             'changed::enabled-filters', self.settings_changed)
         self.settings.connect('changed::emit-dbus-signals',
+                              self.settings_changed)
+        self.settings.connect('changed::filter-settings',
                               self.settings_changed)
 
     def settings_changed(self, settings, key):

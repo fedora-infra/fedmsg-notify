@@ -17,13 +17,14 @@
 # Authors: Luke Macken <lmacken@redhat.com>
 
 import os
+import yum
 
 from fedora.client.pkgdb import PackageDB
 
 
 class Filter(object):
     __description__ = None
-    __user_entry__ = False
+    __user_entry__ = None
 
     def __init__(self, settings):
         self.settings = settings
@@ -67,10 +68,10 @@ class ReportedBugsFilter(Filter):
 class MyPackageFilter(Filter):
     """ Matches messages regarding packages that a given user has ACLs on """
     __description__ = 'Packages that these users maintain'
-    __user_entry__ = True
+    __user_entry__ = 'Usernames'
 
     def __init__(self, settings):
-        self.usernames = settings.get_string('usernames').split()
+        self.usernames = settings.replace(',', ' ').split()
         self.packages = set()
         for username in self.usernames:
             for pkg in PackageDB().user_packages(username)['pkgs']:
@@ -86,10 +87,10 @@ class MyPackageFilter(Filter):
 class UsernameFilter(Filter):
     """ Matches messages that contain specific usernames """
     __description__ = 'Messages that reference specific users'
-    __user_entry__ = True
+    __user_entry__ = 'Usernames'
 
     def __init__(self, settings):
-        self.usernames = settings.get_string('usernames').split()
+        self.usernames = settings.replace(',', ' ').split()
 
     def match(self, msg, processor):
         for username in processor.usernames(msg):
@@ -102,7 +103,6 @@ class InstalledPackageFilter(Filter):
     __description__ = 'Packages that you have installed'
 
     def __init__(self, settings):
-        import yum
         yb = yum.YumBase()
         yb.doConfigSetup(init_plugins=False)
         self.packages = [pkg.base_package_name for pkg in
