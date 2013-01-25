@@ -58,6 +58,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     service_filters = []  # A list of regex filters from the fedmsg text processors
     enabled = False
     emit_dbus_signals = None  # Allow us to proxy fedmsg to dbus
+    enabled_filters = ''
 
     _icon_cache = {}
     _object_path = '/%s' % bus_name.replace('.', '/')
@@ -84,7 +85,6 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
             return
 
         self.connect_signal_handlers()
-        self.load_filters()
 
         self.cfg = fedmsg.config.load_config(None, [])
         moksha_options = {
@@ -119,7 +119,8 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     def load_filters(self):
         filter_settings = json.loads(self.settings.get_string('filter-settings'))
         self.filters = [filter(filter_settings.get(filter.__name__, []))
-                        for filter in filters]
+                        for filter in filters
+                        if filter.__name__ in self.enabled_filters]
 
     def connect_signal_handlers(self):
         self.setting_conn = self.settings.connect(
@@ -132,13 +133,20 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     def settings_changed(self, settings, key):
         log.debug('Reloading fedmsg text processor filters.')
         if key == 'enabled-filters':
-            services = settings.get_string(key).split()
+            try:
+                # Older versions of fedmsg-notify utilized a JSON array
+                services = ' '.join(json.loads(settings.get_string(key)))
+                settings.set_string(key, services)
+            except ValueError:
+                services = settings.get_string(key)
+            self.enabled_filters = services.split()
             filters = []
             for processor in fedmsg.text.processors:
-                if processor.__name__ in services:
+                if processor.__name__ in self.enabled_filters:
                     filters.append(processor.__prefix__)
                     log.debug('%s = %s' % (processor.__name__, filters[-1].pattern))
             self.service_filters = filters
+            self.load_filters()
         else:
             self.emit_dbus_signals = settings.get_boolean('emit-dbus-signals')
 

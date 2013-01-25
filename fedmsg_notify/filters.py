@@ -99,7 +99,7 @@ class UsernameFilter(Filter):
 
 
 class PackageFilter(Filter):
-    """ Matches messages referencing packages that are installed locally """
+    """ Matches messages referencing packages that are specified by the user """
     __description__ = 'Messages that reference specific packages'
     __user_entry__ = 'Packages'
 
