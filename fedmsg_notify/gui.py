@@ -124,8 +124,6 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
                                            Gtk.PositionType.BOTTOM, 1, 1)
             top_label = label
             top_switch = switch
-        if not self.enabled_filters:
-            self.enabled_filters = [s.__name__ for s in self._switches]
         self.topic_grid.remove(self.topic_label_placeholder)
         self.topic_grid.remove(self.topic_switch_placeholder)
 
@@ -159,8 +157,6 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
                                                   Gtk.PositionType.BOTTOM, 1, 1)
                 top_label = label
                 top_switch = entry
-        if not self.enabled_filters:
-            self.enabled_filters = [s.__name__ for s in self._switches]
         self.advanced_grid.remove(self.advanced_label_placeholder)
         self.advanced_grid.remove(self.advanced_switch_placeholder)
 
