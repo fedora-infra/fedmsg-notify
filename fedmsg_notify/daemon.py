@@ -132,7 +132,13 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     def settings_changed(self, settings, key):
         log.debug('Reloading fedmsg text processor filters.')
         if key == 'enabled-filters':
-            services = settings.get_string(key).split()
+            try:
+                # Older versions of fedmsg-notify utilized a JSON array
+                services = ' '.join(json.loads(settings.get_string(key)))
+                settings.set_string(key, services)
+            except ValueError:
+                services = settings.get_string(key)
+            services = services.split()
             filters = []
             for processor in fedmsg.text.processors:
                 if processor.__name__ in services:
