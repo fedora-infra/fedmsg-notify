@@ -38,7 +38,12 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         self.set_border_width(10)
 
         self.settings = Gio.Settings.new(self.bus_name)
-        self.enabled_filters = self.settings.get_string('enabled-filters').split()
+        try:
+            self.enabled_filters = ' '.join(json.loads(self.settings.get_string('enabled-filters')))
+            self.settings.set_string('enabled-filters', self.enabled_filters)
+        except ValueError:
+            self.enabled_filters = self.settings.get_string('enabled-filters')
+        self.enabled_filters = self.enabled_filters.split()
         self.filter_settings = self.settings.get_string('filter-settings')
         if self.filter_settings:
             self.filter_settings = json.loads(self.filter_settings)
@@ -219,6 +224,7 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
     def entry_modified(self, entry, text):
         self.filter_settings[entry.__filter__.__name__] = entry.get_text()
         self.settings.set_string('filter-settings', json.dumps(self.filter_settings))
+
 
 class FedmsgNotifyConfigApp(Gtk.Application):
 
