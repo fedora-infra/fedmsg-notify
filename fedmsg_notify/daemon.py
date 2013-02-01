@@ -150,7 +150,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         elif key == 'filter-settings':
             # We don't want to re-initialize all of our filters here, because
             # this could happen for every keystroke the user types in a text
-            # entry. Intead, we do the initialization whenever the list of
+            # entry. Instead, we do the initialization whenever the list of
             # enabled filters changes.
             pass
         elif key == 'emit-dbus-signals':
