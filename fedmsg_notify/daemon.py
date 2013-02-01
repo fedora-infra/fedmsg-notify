@@ -33,7 +33,7 @@ import fedmsg.consumers
 
 from gi.repository import Notify, Gio
 
-from filters import filters
+from filters import get_enabled_filters, filters as all_filters
 
 log = logging.getLogger('moksha.hub')
 
@@ -58,7 +58,8 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     service_filters = []  # A list of regex filters from the fedmsg text processors
     enabled = False
     emit_dbus_signals = None  # Allow us to proxy fedmsg to dbus
-    enabled_filters = ''
+    enabled_filters = []
+    filters = []
 
     _icon_cache = {}
     _object_path = '/%s' % bus_name.replace('.', '/')
@@ -116,12 +117,6 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         Notify.Notification.new("fedmsg", "activated", "").show()
         self.enabled = True
 
-    def load_filters(self):
-        filter_settings = json.loads(self.settings.get_string('filter-settings'))
-        self.filters = [filter(filter_settings.get(filter.__name__, []))
-                        for filter in filters
-                        if filter.__name__ in self.enabled_filters]
-
     def connect_signal_handlers(self):
         self.setting_conn = self.settings.connect(
             'changed::enabled-filters', self.settings_changed)
@@ -131,24 +126,37 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
                               self.settings_changed)
 
     def settings_changed(self, settings, key):
-        log.debug('Reloading fedmsg text processor filters.')
+        self.enabled_filters = get_enabled_filters(self.settings)
         if key == 'enabled-filters':
-            try:
-                # Older versions of fedmsg-notify utilized a JSON array
-                services = ' '.join(json.loads(settings.get_string(key)))
-                settings.set_string(key, services)
-            except ValueError:
-                services = settings.get_string(key)
-            self.enabled_filters = services.split()
-            filters = []
-            for processor in fedmsg.text.processors:
-                if processor.__name__ in self.enabled_filters:
-                    filters.append(processor.__prefix__)
-                    log.debug('%s = %s' % (processor.__name__, filters[-1].pattern))
-            self.service_filters = filters
-            self.load_filters()
+            log.debug('Reloading filter settings')
+            self.service_filters = [processor.__prefix__
+                                    for processor in fedmsg.text.processors
+                                    if processor.__name__ in self.enabled_filters]
+
+            filter_settings = json.loads(self.settings.get_string('filter-settings'))
+            enabled = [filter.__class__.__name__ for filter in self.filters]
+            for filter in all_filters:
+                name = filter.__name__
+                # Remove any filters that were just disabled
+                if name in enabled and name not in self.enabled_filters:
+                    log.debug('Removing filter: %s' % name)
+                    for loaded_filter in self.filters:
+                        if loaded_filter.__class__.__name__ == name:
+                            self.filters.remove(loaded_filter)
+                # Initialize any filters that were just enabled
+                if name not in enabled and name in self.enabled_filters:
+                    log.debug('Initializing filter: %s' % name)
+                    self.filters.append(filter(filter_settings.get(name, '')))
+        elif key == 'filter-settings':
+            # We don't want to re-initialize all of our filters here, because
+            # this could happen for every keystroke the user types in a text
+            # entry. Intead, we do the initialization whenever the list of
+            # enabled filters changes.
+            pass
+        elif key == 'emit-dbus-signals':
+            self.emit_dbus_signals = settings.get_boolean(key)
         else:
-            self.emit_dbus_signals = settings.get_boolean('emit-dbus-signals')
+            log.warn('Unknown setting changed: %s' % key)
 
     def consume(self, msg):
         """ Called by fedmsg (Moksha) with each message as they arrive """

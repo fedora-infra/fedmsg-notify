@@ -23,7 +23,7 @@ import fedmsg.text
 
 from gi.repository import Gtk, Gio
 
-from .filters import filters
+from .filters import filters, get_enabled_filters
 
 
 class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
@@ -38,12 +38,7 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         self.set_border_width(10)
 
         self.settings = Gio.Settings.new(self.bus_name)
-        try:
-            self.enabled_filters = ' '.join(json.loads(self.settings.get_string('enabled-filters')))
-            self.settings.set_string('enabled-filters', self.enabled_filters)
-        except ValueError:
-            self.enabled_filters = self.settings.get_string('enabled-filters')
-        self.enabled_filters = self.enabled_filters.split()
+        self.enabled_filters = get_enabled_filters(self.settings)
         self.filter_settings = self.settings.get_string('filter-settings')
         if self.filter_settings:
             self.filter_settings = json.loads(self.filter_settings)
@@ -173,7 +168,7 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         else:
             self.enabled_filters.remove(button.__name__)
         self.settings.set_string('enabled-filters',
-                                 ' '.join(self.enabled_filters))
+                                 json.dumps(self.enabled_filters))
 
     def activate_cb(self, button, active):
         self.toggle_service(button.get_active())

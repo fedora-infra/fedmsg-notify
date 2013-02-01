@@ -18,6 +18,8 @@
 
 import os
 import yum
+import json
+import logging
 
 from fedora.client.pkgdb import PackageDB
 
@@ -126,6 +128,13 @@ class InstalledPackageFilter(Filter):
         for package in processor.packages(msg):
             if package in self.packages:
                 return True
+
+
+def get_enabled_filters(settings, key='enabled-filters'):
+    try:
+        return json.loads(settings.get_string(key))
+    except ValueError:
+        return settings.get_string(key).split()
 
 
 filters = [
