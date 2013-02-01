@@ -49,14 +49,15 @@ class ReportedBugsFilter(Filter):
         """ Pull bug numbers out of local abrt reports """
         self.bugs = set()
         crash_dir = os.path.expanduser('~/.cache/abrt/spool')
-        for crash in os.listdir(crash_dir):
-            report = os.path.join(crash_dir, crash, 'reported_to')
-            if os.path.exists(report):
-                for line in open(report):
-                    if line.startswith('Bugzilla:'):
-                        #bug_url = line.split('URL=')[-1]
-                        bug_num = int(line.split('=')[-1])
-                        self.bugs.add(bug_num)
+        if os.path.exists(crash_dir):
+            for crash in os.listdir(crash_dir):
+                report = os.path.join(crash_dir, crash, 'reported_to')
+                if os.path.exists(report):
+                    for line in open(report):
+                        if line.startswith('Bugzilla:'):
+                            #bug_url = line.split('URL=')[-1]
+                            bug_num = int(line.split('=')[-1])
+                            self.bugs.add(bug_num)
 
     def match(self, msg, processor):
         """ Check if this update fixes and of our bugs """
