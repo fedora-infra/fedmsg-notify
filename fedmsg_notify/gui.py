@@ -236,6 +236,9 @@ def main():
     sys.exit(app.run(sys.argv))
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
 
 # vim: ts=4 sw=4 expandtab ai
