@@ -23,6 +23,8 @@ import logging
 
 from fedora.client.pkgdb import PackageDB
 
+log = logging.getLogger('moksha.hub')
+
 
 class Filter(object):
     __description__ = None
@@ -63,7 +65,7 @@ class ReportedBugsFilter(Filter):
                 bugs = [bug['bz_id'] for bug in update['bugs']]
                 for bug in self.bugs:
                     if bug in bugs:
-                        print("Message contains bug that user filed!")
+                        log.info("Message contains bug that user filed!")
                         return True
 
 
@@ -76,6 +78,7 @@ class MyPackageFilter(Filter):
         self.usernames = settings.replace(',', ' ').split()
         self.packages = set()
         for username in self.usernames:
+            log.info("Querying the PackageDB for %s's packages" % username)
             for pkg in PackageDB().user_packages(username)['pkgs']:
                 self.packages.add(pkg['name'])
 
