@@ -19,10 +19,12 @@
 from twisted.internet import gtk3reactor
 gtk3reactor.install()
 from twisted.internet import reactor
+from twisted.web.client import downloadPage
+from twisted.internet import  defer
 
 import os
 import json
-import urllib
+import uuid
 import logging
 import dbus
 import dbus.glib
@@ -182,36 +184,62 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         if self.emit_dbus_signals:
             self.MessageReceived(topic, json.dumps(body))
 
-        self.show_notification(topic, body)
+        self.notify(msg)
 
     @dbus.service.signal(dbus_interface=bus_name, signature='ss')
     def MessageReceived(self, topic, body):
         log.debug('Sending dbus signal to %s' % self.msg_received_signal)
 
-    def show_notification(self, topic, body):
+    def notify(self, msg):
+        d = self.fetch_icons(msg)
+        d.addCallbacks(self.display_notification, errback=log.error,
+                       callbackArgs=(msg['body'],))
+
+    def display_notification(self, results, body, *args, **kw):
         pretty_text = fedmsg.text.msg2repr(body, **self.cfg)
         log.debug(pretty_text)
         title = fedmsg.text.msg2title(body, **self.cfg) or ''
         subtitle = fedmsg.text.msg2subtitle(body, **self.cfg) or ''
         link = fedmsg.text.msg2link(body, **self.cfg) or ''
-        icon = self.get_icon(fedmsg.text.msg2icon(body, **self.cfg)) or ''
-        secondary_icon = self.get_icon(
-            fedmsg.text.msg2secondary_icon(body, **self.cfg)) or ''
+        icon = self._icon_cache.get(fedmsg.text.msg2icon(body, **self.cfg))
+        secondary_icon = self._icon_cache.get(
+                fedmsg.text.msg2secondary_icon(body, **self.cfg))
 
         note = Notify.Notification.new(title, subtitle + ' ' + link, icon)
         if secondary_icon:
             note.set_hint_string('image-path', secondary_icon)
         note.show()
 
-    def get_icon(self, icon):
+    def fetch_icons(self, msg):
+        icons = []
+        body = msg.get('body')
+        icon = fedmsg.text.msg2icon(body, **self.cfg)
         if icon:
-            icon_file = self._icon_cache.get(icon)
-            if not icon_file:
+            icons.append(self.get_icon(icon))
+        secondary_icon = fedmsg.text.msg2secondary_icon(body, **self.cfg)
+        if secondary_icon:
+            icons.append(self.get_icon(secondary_icon))
+        return defer.DeferredList(icons)
+
+    def get_icon(self, icon):
+        icon_file = self._icon_cache.get(icon)
+        if not icon_file:
+            icon_id = str(uuid.uuid5(uuid.NAMESPACE_URL, icon))
+            filename = os.path.join(self.cache_dir, icon_id)
+            if not os.path.exists(filename):
                 log.debug('Downloading icon: %s' % icon)
-                icon_file, headers = urllib.urlretrieve(icon)
-                self._icon_cache[icon] = icon_file
-            icon = icon_file
-        return icon
+                d = downloadPage(icon, filename)
+                d.addCallbacks(self.cache_icon, errback=log.error,
+                               callbackArgs=(icon, filename))
+                return d
+            else:
+                self._icon_cache[icon] = filename
+        d = defer.Deferred()
+        d.callback(None)
+        return d
+
+    def cache_icon(self, results, icon_url, filename):
+        self._icon_cache[icon_url] = filename
 
     @dbus.service.method(bus_name)
     def Enable(self, *args, **kw):
