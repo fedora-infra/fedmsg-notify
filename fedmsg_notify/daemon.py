@@ -85,6 +85,10 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
             log.info('Daemon already running. Exiting...')
             return
 
+        self.cache_dir = os.path.expanduser('~/.cache/fedmsg-notify')
+        if not os.path.isdir(self.cache_dir):
+            os.makedirs(self.cache_dir)
+
         self.connect_signal_handlers()
 
         self.cfg = fedmsg.config.load_config(None, [])
