@@ -245,6 +245,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         checksum = self.hash_file(filename)
         if checksum in cache:
             cache[icon_url] = cache[checksum]
+            os.unlink(filename)
         else:
             cache[icon_url] = cache[checksum] = filename
 
