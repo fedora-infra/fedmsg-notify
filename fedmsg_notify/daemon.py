@@ -25,10 +25,12 @@ from twisted.internet import  defer
 import os
 import json
 import uuid
+import shutil
 import logging
 import dbus
 import dbus.glib
 import dbus.service
+import tempfile
 import moksha.hub
 import fedmsg.text
 import fedmsg.consumers
@@ -87,10 +89,6 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
             log.info('Daemon already running. Exiting...')
             return
 
-        self.cache_dir = os.path.expanduser('~/.cache/fedmsg-notify')
-        if not os.path.isdir(self.cache_dir):
-            os.makedirs(self.cache_dir)
-
         self.connect_signal_handlers()
 
         self.cfg = fedmsg.config.load_config(None, [])
@@ -102,6 +100,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
             ),
         }
         self.cfg.update(moksha_options)
+        self.cache_dir = tempfile.mkdtemp()
 
         fedmsg.text.make_processors(**self.cfg)
         self.settings_changed(self.settings, 'enabled-filters')
@@ -250,18 +249,14 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         self.__del__()
 
     def __del__(self):
-        for icon, filename in self._icon_cache.items():
-            try:
-                os.unlink(filename)
-            except OSError:
-                pass
         if not self.enabled:
             return
+        log.info('Exiting...')
         self.hub.close()
         Notify.Notification.new("fedmsg", "deactivated", "").show()
         Notify.uninit()
+        shutil.rmtree(self.cache_dir, ignore_errors=True)
         self.enabled = False
-        log.info('Exiting...')
         reactor.stop()
 
 
