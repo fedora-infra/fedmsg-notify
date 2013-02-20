@@ -17,6 +17,7 @@
 # Author: Luke Macken <lmacken@redhat.com>
 
 import sys
+import cgi
 import dbus
 import json
 import fedmsg.text
@@ -113,7 +114,10 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         fedmsg.text.make_processors(**fedmsg.config.load_config(None, []))
         for processor in fedmsg.text.processors:
             label = Gtk.Label(halign=Gtk.Align.START, hexpand=True)
-            label.set_text(processor.__obj__)
+            label.set_markup('<a href="%s" title="%s">%s</a>' %
+                             (processor.__link__,
+                              cgi.escape(processor.__description__),
+                              cgi.escape(processor.__obj__)))
             switch = Gtk.Switch(halign=Gtk.Align.END, active=processor.__name__
                                 in self.enabled_filters)
             switch.__name__ = processor.__name__
