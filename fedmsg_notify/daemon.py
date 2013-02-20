@@ -21,10 +21,12 @@ gtk3reactor.install()
 from twisted.internet import reactor
 from twisted.web.client import downloadPage
 from twisted.internet import  defer
+from twisted.internet.error import ReactorNotRunning
 
 import os
 import json
 import uuid
+import atexit
 import shutil
 import hashlib
 import logging
@@ -269,12 +271,16 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         Notify.uninit()
         shutil.rmtree(self.cache_dir, ignore_errors=True)
         self.enabled = False
-        reactor.stop()
+        try:
+            reactor.stop()
+        except ReactorNotRunning:
+            pass
 
 
 def main():
     service = FedmsgNotifyService()
     if service.enabled:
+        atexit.register(service.__del__)
         reactor.run()
 
 if __name__ == '__main__':
