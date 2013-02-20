@@ -13,27 +13,34 @@
 # You should have received a copy of the GNU General Public License
 # along with fedmsg-notify.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright (C) 2012 Red Hat, Inc.
+# Copyright (C) 2012, 2013 Red Hat, Inc.
 # Author: Luke Macken <lmacken@redhat.com>
 
 from twisted.internet import gtk3reactor
 gtk3reactor.install()
 from twisted.internet import reactor
+from twisted.web.client import downloadPage
+from twisted.internet import  defer
+from twisted.internet.error import ReactorNotRunning
 
 import os
 import json
-import urllib
+import uuid
+import atexit
+import shutil
+import hashlib
 import logging
 import dbus
 import dbus.glib
 import dbus.service
+import tempfile
 import moksha.hub
 import fedmsg.text
 import fedmsg.consumers
 
 from gi.repository import Notify, Gio
 
-from filters import filters
+from filters import get_enabled_filters, filters as all_filters
 
 log = logging.getLogger('moksha.hub')
 
@@ -58,7 +65,8 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     service_filters = []  # A list of regex filters from the fedmsg text processors
     enabled = False
     emit_dbus_signals = None  # Allow us to proxy fedmsg to dbus
-    enabled_filters = ''
+    enabled_filters = []
+    filters = []
 
     _icon_cache = {}
     _object_path = '/%s' % bus_name.replace('.', '/')
@@ -95,6 +103,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
             ),
         }
         self.cfg.update(moksha_options)
+        self.cache_dir = tempfile.mkdtemp()
 
         fedmsg.text.make_processors(**self.cfg)
         self.settings_changed(self.settings, 'enabled-filters')
@@ -116,12 +125,6 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         Notify.Notification.new("fedmsg", "activated", "").show()
         self.enabled = True
 
-    def load_filters(self):
-        filter_settings = json.loads(self.settings.get_string('filter-settings'))
-        self.filters = [filter(filter_settings.get(filter.__name__, []))
-                        for filter in filters
-                        if filter.__name__ in self.enabled_filters]
-
     def connect_signal_handlers(self):
         self.setting_conn = self.settings.connect(
             'changed::enabled-filters', self.settings_changed)
@@ -131,24 +134,37 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
                               self.settings_changed)
 
     def settings_changed(self, settings, key):
-        log.debug('Reloading fedmsg text processor filters.')
+        self.enabled_filters = get_enabled_filters(self.settings)
         if key == 'enabled-filters':
-            try:
-                # Older versions of fedmsg-notify utilized a JSON array
-                services = ' '.join(json.loads(settings.get_string(key)))
-                settings.set_string(key, services)
-            except ValueError:
-                services = settings.get_string(key)
-            self.enabled_filters = services.split()
-            filters = []
-            for processor in fedmsg.text.processors:
-                if processor.__name__ in self.enabled_filters:
-                    filters.append(processor.__prefix__)
-                    log.debug('%s = %s' % (processor.__name__, filters[-1].pattern))
-            self.service_filters = filters
-            self.load_filters()
+            log.debug('Reloading filter settings')
+            self.service_filters = [processor.__prefix__
+                                    for processor in fedmsg.text.processors
+                                    if processor.__name__ in self.enabled_filters]
+
+            filter_settings = json.loads(self.settings.get_string('filter-settings'))
+            enabled = [filter.__class__.__name__ for filter in self.filters]
+            for filter in all_filters:
+                name = filter.__name__
+                # Remove any filters that were just disabled
+                if name in enabled and name not in self.enabled_filters:
+                    log.debug('Removing filter: %s' % name)
+                    for loaded_filter in self.filters:
+                        if loaded_filter.__class__.__name__ == name:
+                            self.filters.remove(loaded_filter)
+                # Initialize any filters that were just enabled
+                if name not in enabled and name in self.enabled_filters:
+                    log.debug('Initializing filter: %s' % name)
+                    self.filters.append(filter(filter_settings.get(name, '')))
+        elif key == 'filter-settings':
+            # We don't want to re-initialize all of our filters here, because
+            # this could happen for every keystroke the user types in a text
+            # entry. Instead, we do the initialization whenever the list of
+            # enabled filters changes.
+            pass
+        elif key == 'emit-dbus-signals':
+            self.emit_dbus_signals = settings.get_boolean(key)
         else:
-            self.emit_dbus_signals = settings.get_boolean('emit-dbus-signals')
+            log.warn('Unknown setting changed: %s' % key)
 
     def consume(self, msg):
         """ Called by fedmsg (Moksha) with each message as they arrive """
@@ -170,36 +186,74 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         if self.emit_dbus_signals:
             self.MessageReceived(topic, json.dumps(body))
 
-        self.show_notification(topic, body)
+        self.notify(msg)
 
     @dbus.service.signal(dbus_interface=bus_name, signature='ss')
     def MessageReceived(self, topic, body):
         log.debug('Sending dbus signal to %s' % self.msg_received_signal)
 
-    def show_notification(self, topic, body):
+    def notify(self, msg):
+        d = self.fetch_icons(msg)
+        d.addCallbacks(self.display_notification, errback=log.error,
+                       callbackArgs=(msg['body'],))
+
+    def display_notification(self, results, body, *args, **kw):
         pretty_text = fedmsg.text.msg2repr(body, **self.cfg)
-        log.debug(pretty_text)
+        log.info(pretty_text)
         title = fedmsg.text.msg2title(body, **self.cfg) or ''
         subtitle = fedmsg.text.msg2subtitle(body, **self.cfg) or ''
         link = fedmsg.text.msg2link(body, **self.cfg) or ''
-        icon = self.get_icon(fedmsg.text.msg2icon(body, **self.cfg)) or ''
-        secondary_icon = self.get_icon(
-            fedmsg.text.msg2secondary_icon(body, **self.cfg)) or ''
+        icon = self._icon_cache.get(fedmsg.text.msg2icon(body, **self.cfg))
+        secondary_icon = self._icon_cache.get(
+                fedmsg.text.msg2secondary_icon(body, **self.cfg))
 
         note = Notify.Notification.new(title, subtitle + ' ' + link, icon)
         if secondary_icon:
             note.set_hint_string('image-path', secondary_icon)
         note.show()
 
-    def get_icon(self, icon):
+    def fetch_icons(self, msg):
+        icons = []
+        body = msg.get('body')
+        icon = fedmsg.text.msg2icon(body, **self.cfg)
         if icon:
-            icon_file = self._icon_cache.get(icon)
-            if not icon_file:
+            icons.append(self.get_icon(icon))
+        secondary_icon = fedmsg.text.msg2secondary_icon(body, **self.cfg)
+        if secondary_icon:
+            icons.append(self.get_icon(secondary_icon))
+        return defer.DeferredList(icons)
+
+    def get_icon(self, icon):
+        icon_file = self._icon_cache.get(icon)
+        if not icon_file:
+            icon_id = str(uuid.uuid5(uuid.NAMESPACE_URL, icon))
+            filename = os.path.join(self.cache_dir, icon_id)
+            if not os.path.exists(filename):
                 log.debug('Downloading icon: %s' % icon)
-                icon_file, headers = urllib.urlretrieve(icon)
-                self._icon_cache[icon] = icon_file
-            icon = icon_file
-        return icon
+                d = downloadPage(icon, filename)
+                d.addCallbacks(self.cache_icon, errback=log.error,
+                               callbackArgs=(icon, filename))
+                return d
+            else:
+                self._icon_cache[icon] = filename
+        d = defer.Deferred()
+        d.callback(None)
+        return d
+
+    def cache_icon(self, results, icon_url, filename):
+        cache = self._icon_cache
+        checksum = self.hash_file(filename)
+        if checksum in cache:
+            cache[icon_url] = cache[checksum]
+            os.unlink(filename)
+        else:
+            cache[icon_url] = cache[checksum] = filename
+
+    def hash_file(self, filename):
+        md5 = hashlib.md5(usedforsecurity=False)
+        with open(filename) as f:
+            md5.update(f.read())
+        return md5.hexdigest()
 
     @dbus.service.method(bus_name)
     def Enable(self, *args, **kw):
@@ -210,24 +264,24 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         self.__del__()
 
     def __del__(self):
-        for icon, filename in self._icon_cache.items():
-            try:
-                os.unlink(filename)
-            except OSError:
-                pass
         if not self.enabled:
             return
+        log.info('Exiting...')
         self.hub.close()
         Notify.Notification.new("fedmsg", "deactivated", "").show()
         Notify.uninit()
+        shutil.rmtree(self.cache_dir, ignore_errors=True)
         self.enabled = False
-        log.info('Exiting...')
-        reactor.stop()
+        try:
+            reactor.stop()
+        except ReactorNotRunning:
+            pass
 
 
 def main():
     service = FedmsgNotifyService()
     if service.enabled:
+        atexit.register(service.__del__)
         reactor.run()
 
 if __name__ == '__main__':

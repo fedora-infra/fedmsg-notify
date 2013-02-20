@@ -18,8 +18,13 @@
 
 import os
 import yum
+import json
+import logging
 
+from twisted.internet import reactor
 from fedora.client.pkgdb import PackageDB
+
+log = logging.getLogger('moksha.hub')
 
 
 class Filter(object):
@@ -44,14 +49,15 @@ class ReportedBugsFilter(Filter):
         """ Pull bug numbers out of local abrt reports """
         self.bugs = set()
         crash_dir = os.path.expanduser('~/.cache/abrt/spool')
-        for crash in os.listdir(crash_dir):
-            report = os.path.join(crash_dir, crash, 'reported_to')
-            if os.path.exists(report):
-                for line in open(report):
-                    if line.startswith('Bugzilla:'):
-                        #bug_url = line.split('URL=')[-1]
-                        bug_num = int(line.split('=')[-1])
-                        self.bugs.add(bug_num)
+        if os.path.exists(crash_dir):
+            for crash in os.listdir(crash_dir):
+                report = os.path.join(crash_dir, crash, 'reported_to')
+                if os.path.exists(report):
+                    for line in open(report):
+                        if line.startswith('Bugzilla:'):
+                            #bug_url = line.split('URL=')[-1]
+                            bug_num = int(line.split('=')[-1])
+                            self.bugs.add(bug_num)
 
     def match(self, msg, processor):
         """ Check if this update fixes and of our bugs """
@@ -61,7 +67,7 @@ class ReportedBugsFilter(Filter):
                 bugs = [bug['bz_id'] for bug in update['bugs']]
                 for bug in self.bugs:
                     if bug in bugs:
-                        print("Message contains bug that user filed!")
+                        log.info("Message contains bug that user filed!")
                         return True
 
 
@@ -73,9 +79,12 @@ class MyPackageFilter(Filter):
     def __init__(self, settings):
         self.usernames = settings.replace(',', ' ').split()
         self.packages = set()
-        for username in self.usernames:
-            for pkg in PackageDB().user_packages(username)['pkgs']:
-                self.packages.add(pkg['name'])
+        def _query_pkgdb():
+            for username in self.usernames:
+                log.info("Querying the PackageDB for %s's packages" % username)
+                for pkg in PackageDB().user_packages(username)['pkgs']:
+                    self.packages.add(pkg['name'])
+        reactor.callInThread(_query_pkgdb)
 
     def match(self, msg, processor):
         packages = processor.packages(msg)
@@ -117,15 +126,25 @@ class InstalledPackageFilter(Filter):
     __description__ = 'Packages that you have installed'
 
     def __init__(self, settings):
-        yb = yum.YumBase()
-        yb.doConfigSetup(init_plugins=False)
-        self.packages = [pkg.base_package_name for pkg in
-                         yb.doPackageLists(pkgnarrow='installed')]
+        self.packages = []
+        def _query_yum():
+            yb = yum.YumBase()
+            yb.doConfigSetup(init_plugins=False)
+            self.packages = [pkg.base_package_name for pkg in
+                            yb.doPackageLists(pkgnarrow='installed')]
+        reactor.callInThread(_query_yum)
 
     def match(self, msg, processor):
         for package in processor.packages(msg):
             if package in self.packages:
                 return True
+
+
+def get_enabled_filters(settings, key='enabled-filters'):
+    try:
+        return json.loads(settings.get_string(key))
+    except ValueError:
+        return settings.get_string(key).split()
 
 
 filters = [

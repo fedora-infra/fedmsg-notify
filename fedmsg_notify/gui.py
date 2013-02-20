@@ -17,13 +17,14 @@
 # Author: Luke Macken <lmacken@redhat.com>
 
 import sys
+import cgi
 import dbus
 import json
 import fedmsg.text
 
 from gi.repository import Gtk, Gio
 
-from .filters import filters
+from .filters import filters, get_enabled_filters
 
 
 class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
@@ -38,7 +39,7 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         self.set_border_width(10)
 
         self.settings = Gio.Settings.new(self.bus_name)
-        self.enabled_filters = self.settings.get_string('enabled-filters').split()
+        self.enabled_filters = get_enabled_filters(self.settings)
         self.filter_settings = self.settings.get_string('filter-settings')
         if self.filter_settings:
             self.filter_settings = json.loads(self.filter_settings)
@@ -113,7 +114,10 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         fedmsg.text.make_processors(**fedmsg.config.load_config(None, []))
         for processor in fedmsg.text.processors:
             label = Gtk.Label(halign=Gtk.Align.START, hexpand=True)
-            label.set_text(processor.__obj__)
+            label.set_markup('<a href="%s" title="%s">%s</a>' %
+                             (processor.__link__,
+                              cgi.escape(processor.__description__),
+                              cgi.escape(processor.__obj__)))
             switch = Gtk.Switch(halign=Gtk.Align.END, active=processor.__name__
                                 in self.enabled_filters)
             switch.__name__ = processor.__name__
@@ -168,7 +172,7 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         else:
             self.enabled_filters.remove(button.__name__)
         self.settings.set_string('enabled-filters',
-                                 ' '.join(self.enabled_filters))
+                                 json.dumps(self.enabled_filters))
 
     def activate_cb(self, button, active):
         self.toggle_service(button.get_active())
@@ -220,6 +224,7 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         self.filter_settings[entry.__filter__.__name__] = entry.get_text()
         self.settings.set_string('filter-settings', json.dumps(self.filter_settings))
 
+
 class FedmsgNotifyConfigApp(Gtk.Application):
 
     def do_activate(self):
@@ -235,6 +240,9 @@ def main():
     sys.exit(app.run(sys.argv))
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
 
 # vim: ts=4 sw=4 expandtab ai
