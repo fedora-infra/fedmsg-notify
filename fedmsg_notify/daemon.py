@@ -26,6 +26,7 @@ import os
 import json
 import uuid
 import shutil
+import hashlib
 import logging
 import dbus
 import dbus.glib
@@ -238,7 +239,18 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         return d
 
     def cache_icon(self, results, icon_url, filename):
-        self._icon_cache[icon_url] = filename
+        cache = self._icon_cache
+        checksum = self.hash_file(filename)
+        if checksum in cache:
+            cache[icon_url] = cache[checksum]
+        else:
+            cache[icon_url] = cache[checksum] = filename
+
+    def hash_file(self, filename):
+        md5 = hashlib.md5(usedforsecurity=False)
+        with open(filename) as f:
+            md5.update(f.read())
+        return md5.hexdigest()
 
     @dbus.service.method(bus_name)
     def Enable(self, *args, **kw):
