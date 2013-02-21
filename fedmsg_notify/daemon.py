@@ -273,12 +273,12 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         self.hub.close()
         Notify.Notification.new("fedmsg", "deactivated", "").show()
         Notify.uninit()
-        shutil.rmtree(self.cache_dir, ignore_errors=True)
         self.enabled = False
         try:
             reactor.stop()
         except ReactorNotRunning:
             pass
+        shutil.rmtree(self.cache_dir, ignore_errors=True)
 
 
 def main():
