@@ -42,30 +42,19 @@ Here is an example of a basic Python program that listens to fedmsg-notify signa
 
 import json
 import dbus
-import dbus.mainloop.glib
 
-from pprint import pprint
 from gi.repository import GObject
+from dbus.mainloop.glib import DBusGMainLoop
 
-class FedmsgListener(object):
-    """ An example service that listens to fedmsg-notify signals over dbus """
+def consume(topic, body):
+    print(topic)
+    print(json.loads(body))
 
-    def __init__(self):
-        dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-        self.bus = dbus.SessionBus()
-        self.bus.add_signal_receiver(self.consume,
-                                     signal_name='MessageReceived',
-                                     dbus_interface='org.fedoraproject.fedmsg.notify',
-                                     path='/org/fedoraproject/fedmsg/notify')
-
-    def consume(self, topic, body):
-        body = json.loads(body)
-        print(topic)
-        pprint(body)
-
-
-if __name__ == '__main__':
-    l = FedmsgListener()
-    loop = GObject.MainLoop()
-    loop.run()
+DBusGMainLoop(set_as_default=True)
+bus = dbus.SessionBus()
+bus.add_signal_receiver(consume, signal_name='MessageReceived',
+                        dbus_interface='org.fedoraproject.fedmsg.notify',
+                        path='/org/fedoraproject/fedmsg/notify')
+loop = GObject.MainLoop()
+loop.run()
 ```
