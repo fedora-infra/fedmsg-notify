@@ -28,14 +28,12 @@ yum -y install fedmsg-notify
 Writing applications that consume fedmsg messages through DBus
 --------------------------------------------------------------
 
-By default, the `fedmsg-notify-daemon` fires off a
-`org.fedoraproject.fedmsg.notify.MessageReceived` DBus signal upon each
-message, allowing you to easily consume them in your desktop application.
-
-This behavior can be disabled by running:
+The `fedmsg-notify-daemon` has the ability to relay messages over DBus. When
+enabled, it will trigger a `org.fedoraproject.fedmsg.notify.MessageReceived`
+signal upon each message. This behavior can be enabled by running:
 
 ```
-gsettings set org.fedoraproject.fedmsg.notify emit-dbus-signals false
+gsettings set org.fedoraproject.fedmsg.notify emit-dbus-signals true
 ```
 
 Here is an example of a basic Python program that listens to fedmsg-notify signals over DBus.
