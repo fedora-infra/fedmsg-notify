@@ -241,6 +241,9 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         return d
 
     def cache_icon(self, results, icon_url, filename):
+        if not os.path.exists(filename):
+            log.debug('Failed to download %s' % icon_url)
+            return
         cache = self._icon_cache
         checksum = self.hash_file(filename)
         if checksum in cache:
