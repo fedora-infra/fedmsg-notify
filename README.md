@@ -24,6 +24,13 @@ only available on [Fedora 18](https://apps.fedoraproject.org/packages/fedmsg-not
 yum -y install fedmsg-notify
 ```
 
+Running
+--------
+
+Once installed the "Fedmsg Notification Configuration" should appear in your
+application menu. You can also run `fedmsg-notify-config` by hand, or `python
+-m fedmsg_notify.gui` from git.
+
 
 Writing applications that consume fedmsg messages through DBus
 --------------------------------------------------------------
