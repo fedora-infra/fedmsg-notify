@@ -61,7 +61,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     topic = 'org.fedoraproject.*'
     config_key = 'fedmsg.consumers.notifyconsumer.enabled'
     bus_name = 'org.fedoraproject.fedmsg.notify'
-    obj_path = 'org/fedoraproject/fedmsg/notify'
+    _object_path = '/org/fedoraproject/fedmsg/notify'
     msg_received_signal = 'org.fedoraproject.fedmsg.notify.MessageReceived'
     service_filters = []  # A list of regex filters from the fedmsg text processors
     enabled = False
@@ -119,7 +119,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         fedmsg.consumers.FedmsgConsumer.__init__(self, moksha.hub._hub)
 
         bus_name = dbus.service.BusName(self.bus_name, bus=self.session_bus)
-        dbus.service.Object.__init__(self, bus_name, self.obj_path)
+        dbus.service.Object.__init__(self, bus_name, self._object_path)
 
         Notify.init("fedmsg")
         Notify.Notification.new("fedmsg", "activated", "").show()
