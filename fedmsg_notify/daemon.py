@@ -87,7 +87,12 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
                      self.config_key)
             return
 
-        self.session_bus = dbus.SessionBus()
+        try:
+            self.session_bus = dbus.SessionBus()
+        except dbus.exceptions.DBusException, e:
+            log.error('Unable to connect to DBus SessionBus')
+            log.exception(e)
+            return
         if self.session_bus.name_has_owner(self.bus_name):
             log.info('Daemon already running. Exiting...')
             return
