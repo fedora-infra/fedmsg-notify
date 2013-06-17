@@ -24,6 +24,7 @@ from twisted.internet import  defer
 from twisted.internet.error import ReactorNotRunning
 
 import os
+import sys
 import json
 import uuid
 import atexit
@@ -79,7 +80,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         return self
 
     def __init__(self):
-        moksha.hub.setup_logger(verbose=True)
+        moksha.hub.setup_logger(verbose='-v' in sys.argv)
         self.settings = Gio.Settings.new(self.bus_name)
         self.emit_dbus_signals = self.settings.get_boolean('emit-dbus-signals')
         if not self.settings.get_boolean('enabled'):
