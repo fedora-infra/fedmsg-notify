@@ -185,7 +185,6 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
                     log.debug('Matched topic %s with %s' % (topic, filter.pattern))
                     break
             else:
-                log.debug("Message to %s didn't match filters" % topic)
                 return
 
         if self.emit_dbus_signals:
