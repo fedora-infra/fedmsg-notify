@@ -232,7 +232,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     def get_icon(self, icon):
         icon_file = self._icon_cache.get(icon)
         if not icon_file:
-            icon_id = str(uuid.uuid5(uuid.NAMESPACE_URL, icon))
+            icon_id = str(uuid.uuid5(uuid.NAMESPACE_URL, str(icon)))
             filename = os.path.join(self.cache_dir, icon_id)
             if not os.path.exists(filename):
                 log.debug('Downloading icon: %s' % icon)
