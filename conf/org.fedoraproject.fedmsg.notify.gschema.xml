@@ -21,5 +21,10 @@
       <summary>User configured filter settings</summary>
       <description>A JSON dictionary of advanced filter settings.</description>
     </key>
+    <key type="i" name="max-notifications">
+      <default>100</default>
+      <summary>The maximum number of notifications to keep open</summary>
+      <description>Defines how many notifications to keep open at once.</description>
+    </key>
   </schema>
 </schemalist>

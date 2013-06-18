@@ -83,6 +83,8 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         moksha.hub.setup_logger(verbose='-v' in sys.argv)
         self.settings = Gio.Settings.new(self.bus_name)
         self.emit_dbus_signals = self.settings.get_boolean('emit-dbus-signals')
+        self.max_notifications= self.settings.get_int('max-notifications')
+
         if not self.settings.get_boolean('enabled'):
             log.info('Disabled via %r configuration, exiting...' %
                      self.config_key)
@@ -127,7 +129,8 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         dbus.service.Object.__init__(self, bus_name, self._object_path)
 
         Notify.init("fedmsg")
-        Notify.Notification.new("fedmsg", "activated", "").show()
+        n = Notify.Notification.new("fedmsg", "activated", "").show()
+        self.notifications.insert(0, n)
         self.enabled = True
 
     def connect_signal_handlers(self):
@@ -215,6 +218,11 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         note = Notify.Notification.new(title, subtitle + ' ' + link, icon)
         if secondary_icon:
             note.set_hint_string('image-path', secondary_icon)
+
+        if len(self.notifications) >= self.max_notifications:
+            self.notifications.pop().close()
+        self.notifications.insert(0, note)
+
         note.show()
 
     def fetch_icons(self, msg):
