@@ -24,6 +24,7 @@ from twisted.internet import  defer
 from twisted.internet.error import ReactorNotRunning
 
 import os
+import sys
 import json
 import uuid
 import atexit
@@ -61,6 +62,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     topic = 'org.fedoraproject.*'
     config_key = 'fedmsg.consumers.notifyconsumer.enabled'
     bus_name = 'org.fedoraproject.fedmsg.notify'
+    _object_path = '/org/fedoraproject/fedmsg/notify'
     msg_received_signal = 'org.fedoraproject.fedmsg.notify.MessageReceived'
     service_filters = []  # A list of regex filters from the fedmsg text processors
     enabled = False
@@ -69,7 +71,6 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     filters = []
 
     _icon_cache = {}
-    _object_path = '/%s' % bus_name.replace('.', '/')
     __name__ = "FedmsgNotifyService"
 
     def __call__(self, hub):
@@ -79,7 +80,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         return self
 
     def __init__(self):
-        moksha.hub.setup_logger(verbose=True)
+        moksha.hub.setup_logger(verbose='-v' in sys.argv)
         self.settings = Gio.Settings.new(self.bus_name)
         self.emit_dbus_signals = self.settings.get_boolean('emit-dbus-signals')
         if not self.settings.get_boolean('enabled'):
@@ -87,7 +88,11 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
                      self.config_key)
             return
 
-        self.session_bus = dbus.SessionBus()
+        try:
+            self.session_bus = dbus.SessionBus()
+        except dbus.exceptions.DBusException, e:
+            log.exception('Unable to connect to DBus SessionBus')
+            return
         if self.session_bus.name_has_owner(self.bus_name):
             log.info('Daemon already running. Exiting...')
             return
@@ -190,7 +195,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
     @dbus.service.signal(dbus_interface=bus_name, signature='ss')
     def MessageReceived(self, topic, body):
-        log.debug('Sending dbus signal to %s' % self.msg_received_signal)
+        pass
 
     def notify(self, msg):
         d = self.fetch_icons(msg)
@@ -199,7 +204,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
     def display_notification(self, results, body, *args, **kw):
         pretty_text = fedmsg.text.msg2repr(body, **self.cfg)
-        log.info(pretty_text)
+        log.debug(pretty_text)
         title = fedmsg.text.msg2title(body, **self.cfg) or ''
         subtitle = fedmsg.text.msg2subtitle(body, **self.cfg) or ''
         link = fedmsg.text.msg2link(body, **self.cfg) or ''
@@ -226,7 +231,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     def get_icon(self, icon):
         icon_file = self._icon_cache.get(icon)
         if not icon_file:
-            icon_id = str(uuid.uuid5(uuid.NAMESPACE_URL, icon))
+            icon_id = str(uuid.uuid5(uuid.NAMESPACE_URL, str(icon)))
             filename = os.path.join(self.cache_dir, icon_id)
             if not os.path.exists(filename):
                 log.debug('Downloading icon: %s' % icon)
@@ -241,6 +246,9 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         return d
 
     def cache_icon(self, results, icon_url, filename):
+        if not os.path.exists(filename):
+            log.debug('Failed to download %s' % icon_url)
+            return
         cache = self._icon_cache
         checksum = self.hash_file(filename)
         if checksum in cache:
@@ -266,16 +274,15 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     def __del__(self):
         if not self.enabled:
             return
-        log.info('Exiting...')
         self.hub.close()
         Notify.Notification.new("fedmsg", "deactivated", "").show()
         Notify.uninit()
-        shutil.rmtree(self.cache_dir, ignore_errors=True)
         self.enabled = False
         try:
             reactor.stop()
         except ReactorNotRunning:
             pass
+        shutil.rmtree(self.cache_dir, ignore_errors=True)
 
 
 def main():

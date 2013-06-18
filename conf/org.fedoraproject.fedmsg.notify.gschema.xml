@@ -12,7 +12,7 @@
       <description>A space delimeted string of fedmsg-notify filters names that are enabled</description>
     </key>
     <key type="b" name="emit-dbus-signals">
-      <default>true</default>
+      <default>false</default>
       <summary>Emit signals for each message</summary>
       <description>This tells fedmsg-notify to emit a DBus signal for each message received from fedmsg. This allows desktop applications to consume messages without each having seperate connections to the bus.</description>
     </key>

@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with fedmsg-notify.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright (C) 2012 Red Hat, Inc.
+# Copyright (C) 2012, 2013 Red Hat, Inc.
 # Authors: Luke Macken <lmacken@redhat.com>
 
 import os
@@ -79,12 +79,13 @@ class MyPackageFilter(Filter):
     def __init__(self, settings):
         self.usernames = settings.replace(',', ' ').split()
         self.packages = set()
-        def _query_pkgdb():
-            for username in self.usernames:
-                log.info("Querying the PackageDB for %s's packages" % username)
-                for pkg in PackageDB().user_packages(username)['pkgs']:
-                    self.packages.add(pkg['name'])
-        reactor.callInThread(_query_pkgdb)
+        reactor.callInThread(self._query_pkgdb)
+
+    def _query_pkgdb(self):
+        for username in self.usernames:
+            log.info("Querying the PackageDB for %s's packages" % username)
+            for pkg in PackageDB().user_packages(username)['pkgs']:
+                self.packages.add(pkg['name'])
 
     def match(self, msg, processor):
         packages = processor.packages(msg)
@@ -127,12 +128,13 @@ class InstalledPackageFilter(Filter):
 
     def __init__(self, settings):
         self.packages = []
-        def _query_yum():
-            yb = yum.YumBase()
-            yb.doConfigSetup(init_plugins=False)
-            self.packages = [pkg.base_package_name for pkg in
-                            yb.doPackageLists(pkgnarrow='installed')]
-        reactor.callInThread(_query_yum)
+        reactor.callInThread(self._query_yum)
+
+    def _query_yum(self):
+        yb = yum.YumBase()
+        yb.doConfigSetup(init_plugins=False)
+        self.packages = [pkg.base_package_name for pkg in
+                         yb.doPackageLists(pkgnarrow='installed')]
 
     def match(self, msg, processor):
         for package in processor.packages(msg):
