@@ -91,8 +91,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         try:
             self.session_bus = dbus.SessionBus()
         except dbus.exceptions.DBusException, e:
-            log.error('Unable to connect to DBus SessionBus')
-            log.exception(e)
+            log.exception('Unable to connect to DBus SessionBus')
             return
         if self.session_bus.name_has_owner(self.bus_name):
             log.info('Daemon already running. Exiting...')
@@ -196,7 +195,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
     @dbus.service.signal(dbus_interface=bus_name, signature='ss')
     def MessageReceived(self, topic, body):
-        log.debug('Sending dbus signal to %s' % self.msg_received_signal)
+        pass
 
     def notify(self, msg):
         d = self.fetch_icons(msg)
@@ -205,7 +204,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
     def display_notification(self, results, body, *args, **kw):
         pretty_text = fedmsg.text.msg2repr(body, **self.cfg)
-        log.info(pretty_text)
+        log.debug(pretty_text)
         title = fedmsg.text.msg2title(body, **self.cfg) or ''
         subtitle = fedmsg.text.msg2subtitle(body, **self.cfg) or ''
         link = fedmsg.text.msg2link(body, **self.cfg) or ''
@@ -275,7 +274,6 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     def __del__(self):
         if not self.enabled:
             return
-        log.info('Exiting...')
         self.hub.close()
         Notify.Notification.new("fedmsg", "deactivated", "").show()
         Notify.uninit()
