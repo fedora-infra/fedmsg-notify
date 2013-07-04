@@ -235,7 +235,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
             filename = os.path.join(self.cache_dir, icon_id)
             if not os.path.exists(filename):
                 log.debug('Downloading icon: %s' % icon)
-                d = downloadPage(icon, filename)
+                d = downloadPage(str(icon), filename)
                 d.addCallbacks(self.cache_icon, errback=log.error,
                                callbackArgs=(icon, filename))
                 return d
