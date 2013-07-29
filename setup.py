@@ -13,7 +13,7 @@ setup(
         url='https://github.com/lmacken/fedmsg-notify',
         license='GPLv3',
         install_requires=requires,
-        packages=['fedmsg_notify'],
+        packages=['fedmsg_notify', 'fedmsg_notify.distro_specific'],
         zip_safe=False,
         entry_points={
             'console_scripts':

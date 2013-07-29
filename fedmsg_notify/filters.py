@@ -17,12 +17,12 @@
 # Authors: Luke Macken <lmacken@redhat.com>
 
 import os
-import yum
 import json
 import logging
 
 from twisted.internet import reactor
-from fedora.client.pkgdb import PackageDB
+
+from .distro_specific import *
 
 log = logging.getLogger('moksha.hub')
 
@@ -79,13 +79,10 @@ class MyPackageFilter(Filter):
     def __init__(self, settings):
         self.usernames = settings.replace(',', ' ').split()
         self.packages = set()
-        reactor.callInThread(self._query_pkgdb)
+        reactor.callInThread(self._query_maintained_packages)
 
-    def _query_pkgdb(self):
-        for username in self.usernames:
-            log.info("Querying the PackageDB for %s's packages" % username)
-            for pkg in PackageDB().user_packages(username)['pkgs']:
-                self.packages.add(pkg['name'])
+    def _query_maintained_packages(self):
+        self.packages = get_user_packages(self.usernames)
 
     def match(self, msg, processor):
         packages = processor.packages(msg)
@@ -128,13 +125,10 @@ class InstalledPackageFilter(Filter):
 
     def __init__(self, settings):
         self.packages = []
-        reactor.callInThread(self._query_yum)
+        reactor.callInThread(self._query_local_packages)
 
-    def _query_yum(self):
-        yb = yum.YumBase()
-        yb.doConfigSetup(init_plugins=False)
-        self.packages = [pkg.base_package_name for pkg in
-                         yb.doPackageLists(pkgnarrow='installed')]
+    def _query_local_packages(self):
+        self.packages = list(get_installed_packages())
 
     def match(self, msg, processor):
         for package in processor.packages(msg):

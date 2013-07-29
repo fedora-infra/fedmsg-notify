@@ -26,5 +26,10 @@
       <summary>The maximum number of notifications to keep open</summary>
       <description>Defines how many notifications to keep open at once.</description>
     </key>
+    <key type="s" name="topic">
+      <default>'org.fedoraproject.*'</default>
+      <summary>The prefix of the topics we want to listen to</summary>
+      <description>The prefix of the topics we want to get notified for.</description>
+    </key>
   </schema>
 </schemalist>
