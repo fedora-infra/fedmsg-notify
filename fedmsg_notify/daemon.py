@@ -59,7 +59,6 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     message.
 
     """
-    topic = 'org.fedoraproject.*'
     config_key = 'fedmsg.consumers.notifyconsumer.enabled'
     bus_name = 'org.fedoraproject.fedmsg.notify'
     _object_path = '/org/fedoraproject/fedmsg/notify'
@@ -85,7 +84,8 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         moksha.hub.setup_logger(verbose='-v' in sys.argv)
         self.settings = Gio.Settings.new(self.bus_name)
         self.emit_dbus_signals = self.settings.get_boolean('emit-dbus-signals')
-        self.max_notifications= self.settings.get_int('max-notifications')
+        self.max_notifications = self.settings.get_int('max-notifications')
+        self.topic = self.settings.get_string('topic')
 
         if not self.settings.get_boolean('enabled'):
             log.info('Disabled via %r configuration, exiting...' %
