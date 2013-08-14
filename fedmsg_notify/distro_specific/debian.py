@@ -21,7 +21,6 @@ from cStringIO import StringIO
 import email.utils
 import gzip
 import logging
-import os
 import urllib2
 
 import deb822

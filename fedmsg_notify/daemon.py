@@ -96,7 +96,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
         try:
             self.session_bus = dbus.SessionBus()
-        except dbus.exceptions.DBusException, e:
+        except dbus.exceptions.DBusException:
             log.exception('Unable to connect to DBus SessionBus')
             return
         if self.session_bus.name_has_owner(self.bus_name):
@@ -242,7 +242,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     def get_icons(self, body):
         icon = self._icon_cache.get(fedmsg.text.msg2icon(body, **self.cfg))
         secondary_icon = self._icon_cache.get(
-                fedmsg.text.msg2secondary_icon(body, **self.cfg))
+            fedmsg.text.msg2secondary_icon(body, **self.cfg))
         ico = hint = None
         if secondary_icon:
             ico = secondary_icon
