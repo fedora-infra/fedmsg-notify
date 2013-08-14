@@ -90,3 +90,11 @@ def get_user_packages(usernames):
         packages |= UPLOADERS[username]
 
     return packages
+
+
+def get_reported_bugs():
+    """
+    Not implemented on debian, just return empty set
+    """
+
+    return set()

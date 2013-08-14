@@ -19,6 +19,7 @@
 import logging
 
 import yum
+import problem
 from fedora.client.pkgdb import PackageDB
 
 
@@ -39,3 +40,22 @@ def get_user_packages(usernames):
             packages.add(pkg['name'])
 
     return packages
+
+
+def get_reported_bugs():
+    """
+    Get bug numbers from local abrt reports
+    """
+
+    bugs = set()
+
+    for prob in problem.list():
+        if not hasattr(prob, 'reported_to'):
+            continue
+
+        for line in prob.reported_to.splitlines():
+            if line.startswith('Bugzilla:'):
+                bug_num = int(line.split('=')[-1])
+                bugs.add(bug_num)
+
+    return bugs
