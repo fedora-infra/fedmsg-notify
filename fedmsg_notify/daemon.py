@@ -156,9 +156,9 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
                 # Remove any filters that were just disabled
                 if name in enabled and name not in self.enabled_filters:
                     log.debug('Removing filter: %s' % name)
-                    for loaded_filter in self.filters:
-                        if loaded_filter.__class__.__name__ == name:
-                            self.filters.remove(loaded_filter)
+                    for loaded_filter in [f for f in self.filters if
+                                          f.__class__.__name__ == name]:
+                        self.filters.remove(loaded_filter)
                 # Initialize any filters that were just enabled
                 if name not in enabled and name in self.enabled_filters:
                     log.debug('Initializing filter: %s' % name)
