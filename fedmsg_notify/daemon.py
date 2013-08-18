@@ -20,7 +20,7 @@ from twisted.internet import gtk3reactor
 gtk3reactor.install()
 from twisted.internet import reactor
 from twisted.web.client import downloadPage
-from twisted.internet import  defer
+from twisted.internet import defer
 from twisted.internet.error import ReactorNotRunning
 
 import os
@@ -70,6 +70,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     emit_dbus_signals = None  # Allow us to proxy fedmsg to dbus
     enabled_filters = []
     filters = []
+    notifications = []
 
     _icon_cache = {}
     __name__ = "FedmsgNotifyService"
@@ -150,7 +151,6 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
             self.service_filters = [processor.__prefix__
                                     for processor in fedmsg.text.processors
                                     if processor.__name__ in self.enabled_filters]
-
             filter_settings = json.loads(self.settings.get_string('filter-settings'))
             enabled = [filter.__class__.__name__ for filter in self.filters]
             for filter in all_filters:
