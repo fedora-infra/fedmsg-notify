@@ -29,6 +29,7 @@ import json
 import uuid
 import atexit
 import shutil
+import psutil
 import hashlib
 import logging
 import dbus
@@ -44,6 +45,7 @@ from gi.repository import Notify, Gio
 from filters import get_enabled_filters, filters as all_filters
 
 log = logging.getLogger('moksha.hub')
+pidfile = os.path.expanduser('~/.fedmsg-notify.pid')
 
 
 class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
@@ -291,9 +293,21 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         except ReactorNotRunning:
             pass
         shutil.rmtree(self.cache_dir, ignore_errors=True)
+        if os.path.exists(pidfile):
+            os.unlink(pidfile)
 
 
 def main():
+    if os.path.exists(pidfile):
+        try:
+            psutil.Process(int(file(pidfile).read()))
+            return
+        except psutil.NoSuchProcess:
+            os.unlink(pidfile)
+
+    with file(pidfile, 'w') as f:
+        f.write(str(os.getpid()))
+
     service = FedmsgNotifyService()
     if service.enabled:
         atexit.register(service.__del__)
