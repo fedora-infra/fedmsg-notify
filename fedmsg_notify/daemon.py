@@ -227,9 +227,12 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
         if len(self.notifications) >= self.max_notifications:
             self.notifications.pop().close()
-        self.notifications.insert(0, note)
 
-        note.show()
+        try:
+            note.show()
+            self.notifications.insert(0, note)
+        except:
+            log.exception('Unable to display notification')
 
     def fetch_icons(self, msg):
         icons = []
