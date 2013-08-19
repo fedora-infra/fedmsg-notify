@@ -218,6 +218,10 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
                 fedmsg.text.msg2secondary_icon(body, **self.cfg))
 
         note = Notify.Notification.new(title, subtitle + ' ' + link, icon)
+        if not note:
+            log.error("Notification.new returned %r" % note)
+            return
+
         if secondary_icon:
             note.set_hint_string('image-path', secondary_icon)
 
