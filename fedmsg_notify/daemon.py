@@ -132,8 +132,9 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         dbus.service.Object.__init__(self, bus_name, self._object_path)
 
         Notify.init("fedmsg")
-        n = Notify.Notification.new("fedmsg", "activated", "").show()
-        self.notifications.insert(0, n)
+        note = Notify.Notification.new("fedmsg", "activated", "")
+        note.show()
+        self.notifications.insert(0, note)
         self.enabled = True
 
     def connect_signal_handlers(self):
@@ -291,14 +292,19 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     def __del__(self):
         if not self.enabled:
             return
-        self.hub.close()
-        Notify.Notification.new("fedmsg", "deactivated", "").show()
-        Notify.uninit()
         self.enabled = False
+
+        for note in self.notifications:
+            note.close()
+
+        Notify.uninit()
+
+        self.hub.close()
         try:
             reactor.stop()
         except ReactorNotRunning:
             pass
+
         shutil.rmtree(self.cache_dir, ignore_errors=True)
         if os.path.exists(pidfile):
             os.unlink(pidfile)
