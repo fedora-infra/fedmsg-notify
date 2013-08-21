@@ -3,6 +3,8 @@ fedmsg-notify
 
 Subscribing to the [Fedora Infrastructure Messsage Bus](http://fedmsg.com) on the desktop.
 
+![fedmsg-notify](http://lewk.org/img/fedmsg-notify-0-crop.png "Realtime desktop notifications")
+
 
 Features
 --------
@@ -31,6 +33,8 @@ Once installed the "Fedmsg Notification Configuration" should appear in your
 application menu. You can also run `fedmsg-notify-config` by hand, or `python
 -m fedmsg_notify.gui` from git.
 
+![fedmsg-notify-config](http://lewk.org/img/fedmsg-notify-config-0.png "fedmsg-notify-config")
+![fedmsg-notify-config](http://lewk.org/img/fedmsg-notify-config-1.png "fedmsg-notify-config")
 
 Writing applications that consume fedmsg messages through DBus
 --------------------------------------------------------------
