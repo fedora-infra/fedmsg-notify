@@ -134,8 +134,12 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         Notify.init("fedmsg")
         note = Notify.Notification.new("fedmsg", "activated", "fedmsg-notify")
         note.show()
+        self.close_after_timeout(note)
         self.notifications.insert(0, note)
         self.enabled = True
+
+    def close_after_timeout(self, note, timeout=3.0):
+        reactor.callLater(timeout, note.close)
 
     def connect_signal_handlers(self):
         self.setting_conn = self.settings.connect(
