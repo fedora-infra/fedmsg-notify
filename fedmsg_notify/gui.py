@@ -161,6 +161,17 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
                                                   Gtk.PositionType.BOTTOM, 1, 1)
                 top_label = label
                 top_switch = entry
+
+        label = Gtk.Label(halign=Gtk.Align.START, hexpand=True)
+        label.set_text('Notification expiration (in seconds)')
+        entry = Gtk.Entry(halign=Gtk.Align.END)
+        entry.set_text(str(self.settings.get_int('expiration')))
+        entry.connect('notify::text', self.expiration_modified)
+        self.advanced_grid.attach_next_to(label, top_label,
+                                          Gtk.PositionType.BOTTOM, 1, 1)
+        self.advanced_grid.attach_next_to(entry, top_switch,
+                                          Gtk.PositionType.BOTTOM, 1, 1)
+
         self.advanced_grid.remove(self.advanced_label_placeholder)
         self.advanced_grid.remove(self.advanced_switch_placeholder)
 
@@ -223,6 +234,13 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
     def entry_modified(self, entry, text):
         self.filter_settings[entry.__filter__.__name__] = entry.get_text()
         self.settings.set_string('filter-settings', json.dumps(self.filter_settings))
+
+    def expiration_modified(self, entry, text):
+        try:
+            expiration = int(entry.get_text())
+            self.settings.set_int('expiration', expiration)
+        except ValueError:
+            return
 
 
 class FedmsgNotifyConfigApp(Gtk.Application):

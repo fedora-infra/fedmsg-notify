@@ -20,7 +20,7 @@ from twisted.internet import gtk3reactor
 gtk3reactor.install()
 from twisted.internet import reactor
 from twisted.web.client import downloadPage
-from twisted.internet import  defer
+from twisted.internet import defer
 from twisted.internet.error import ReactorNotRunning
 
 import os
@@ -29,6 +29,7 @@ import json
 import uuid
 import atexit
 import shutil
+import psutil
 import hashlib
 import logging
 import dbus
@@ -44,6 +45,7 @@ from gi.repository import Notify, Gio
 from filters import get_enabled_filters, filters as all_filters
 
 log = logging.getLogger('moksha.hub')
+pidfile = os.path.expanduser('~/.fedmsg-notify.pid')
 
 
 class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
@@ -59,7 +61,6 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     message.
 
     """
-    topic = 'org.fedoraproject.*'
     config_key = 'fedmsg.consumers.notifyconsumer.enabled'
     bus_name = 'org.fedoraproject.fedmsg.notify'
     _object_path = '/org/fedoraproject/fedmsg/notify'
@@ -69,6 +70,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     emit_dbus_signals = None  # Allow us to proxy fedmsg to dbus
     enabled_filters = []
     filters = []
+    notifications = []
 
     _icon_cache = {}
     __name__ = "FedmsgNotifyService"
@@ -83,6 +85,10 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         moksha.hub.setup_logger(verbose='-v' in sys.argv)
         self.settings = Gio.Settings.new(self.bus_name)
         self.emit_dbus_signals = self.settings.get_boolean('emit-dbus-signals')
+        self.max_notifications = self.settings.get_int('max-notifications')
+        self.topic = self.settings.get_string('topic')
+        self.expire = self.settings.get_int('expiration')
+
         if not self.settings.get_boolean('enabled'):
             log.info('Disabled via %r configuration, exiting...' %
                      self.config_key)
@@ -127,7 +133,10 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         dbus.service.Object.__init__(self, bus_name, self._object_path)
 
         Notify.init("fedmsg")
-        Notify.Notification.new("fedmsg", "activated", "").show()
+        note = Notify.Notification.new("fedmsg", "activated", "fedmsg-notify")
+        note.show()
+        reactor.callLater(3.0, note.close)
+        self.notifications.insert(0, note)
         self.enabled = True
 
     def connect_signal_handlers(self):
@@ -137,6 +146,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
                               self.settings_changed)
         self.settings.connect('changed::filter-settings',
                               self.settings_changed)
+        self.settings.connect('changed::expiration', self.settings_changed)
 
     def settings_changed(self, settings, key):
         self.enabled_filters = get_enabled_filters(self.settings)
@@ -145,7 +155,6 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
             self.service_filters = [processor.__prefix__
                                     for processor in fedmsg.text.processors
                                     if processor.__name__ in self.enabled_filters]
-
             filter_settings = json.loads(self.settings.get_string('filter-settings'))
             enabled = [filter.__class__.__name__ for filter in self.filters]
             for filter in all_filters:
@@ -153,9 +162,9 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
                 # Remove any filters that were just disabled
                 if name in enabled and name not in self.enabled_filters:
                     log.debug('Removing filter: %s' % name)
-                    for loaded_filter in self.filters:
-                        if loaded_filter.__class__.__name__ == name:
-                            self.filters.remove(loaded_filter)
+                    for loaded_filter in [f for f in self.filters if
+                                          f.__class__.__name__ == name]:
+                        self.filters.remove(loaded_filter)
                 # Initialize any filters that were just enabled
                 if name not in enabled and name in self.enabled_filters:
                     log.debug('Initializing filter: %s' % name)
@@ -168,6 +177,8 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
             pass
         elif key == 'emit-dbus-signals':
             self.emit_dbus_signals = settings.get_boolean(key)
+        elif key == 'expiration':
+            self.expire = self.settings.get_int('expiration')
         else:
             log.warn('Unknown setting changed: %s' % key)
 
@@ -205,17 +216,39 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     def display_notification(self, results, body, *args, **kw):
         pretty_text = fedmsg.text.msg2repr(body, **self.cfg)
         log.debug(pretty_text)
+        title, subtitle = self.format_text(body)
+        icon, secondary_icon = self.get_icons(body)
+        note = Notify.Notification.new(title, subtitle, icon)
+        note.set_hint_string('image-path', secondary_icon)
+        try:
+            note.show()
+            self.notifications.insert(0, note)
+            if len(self.notifications) >= self.max_notifications:
+                self.notifications.pop().close()
+            if self.expire:
+                reactor.callLater(self.expire, note.close)
+        except:
+            log.exception('Unable to display notification')
+
+    def format_text(self, body):
         title = fedmsg.text.msg2title(body, **self.cfg) or ''
         subtitle = fedmsg.text.msg2subtitle(body, **self.cfg) or ''
         link = fedmsg.text.msg2link(body, **self.cfg) or ''
+        if link:
+            subtitle = '{} {}'.format(subtitle, link)
+        return title, subtitle
+
+    def get_icons(self, body):
         icon = self._icon_cache.get(fedmsg.text.msg2icon(body, **self.cfg))
         secondary_icon = self._icon_cache.get(
                 fedmsg.text.msg2secondary_icon(body, **self.cfg))
-
-        note = Notify.Notification.new(title, subtitle + ' ' + link, icon)
+        ico = hint = None
         if secondary_icon:
-            note.set_hint_string('image-path', secondary_icon)
-        note.show()
+            ico = secondary_icon
+            hint = icon and icon or secondary_icon
+        elif icon:
+            ico = hint = icon
+        return ico, hint
 
     def fetch_icons(self, msg):
         icons = []
@@ -235,7 +268,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
             filename = os.path.join(self.cache_dir, icon_id)
             if not os.path.exists(filename):
                 log.debug('Downloading icon: %s' % icon)
-                d = downloadPage(icon, filename)
+                d = downloadPage(str(icon), filename)
                 d.addCallbacks(self.cache_icon, errback=log.error,
                                callbackArgs=(icon, filename))
                 return d
@@ -274,18 +307,36 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     def __del__(self):
         if not self.enabled:
             return
-        self.hub.close()
-        Notify.Notification.new("fedmsg", "deactivated", "").show()
-        Notify.uninit()
         self.enabled = False
+
+        for note in self.notifications:
+            note.close()
+
+        Notify.uninit()
+
+        self.hub.close()
         try:
             reactor.stop()
         except ReactorNotRunning:
             pass
+
         shutil.rmtree(self.cache_dir, ignore_errors=True)
+        if os.path.exists(pidfile):
+            os.unlink(pidfile)
 
 
 def main():
+    if os.path.exists(pidfile):
+        try:
+            with file(pidfile) as f:
+                psutil.Process(int(f.read()))
+            return
+        except psutil.NoSuchProcess:
+            os.unlink(pidfile)
+
+    with file(pidfile, 'w') as f:
+        f.write(str(os.getpid()))
+
     service = FedmsgNotifyService()
     if service.enabled:
         atexit.register(service.__del__)
