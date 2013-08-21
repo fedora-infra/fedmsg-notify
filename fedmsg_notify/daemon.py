@@ -326,7 +326,8 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 def main():
     if os.path.exists(pidfile):
         try:
-            psutil.Process(int(file(pidfile).read()))
+            with file(pidfile) as f:
+                psutil.Process(int(f.read()))
             return
         except psutil.NoSuchProcess:
             os.unlink(pidfile)
