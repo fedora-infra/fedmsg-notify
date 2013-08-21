@@ -87,6 +87,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         self.emit_dbus_signals = self.settings.get_boolean('emit-dbus-signals')
         self.max_notifications = self.settings.get_int('max-notifications')
         self.topic = self.settings.get_string('topic')
+        self.expire = self.settings.get_int('expiration')
 
         if not self.settings.get_boolean('enabled'):
             log.info('Disabled via %r configuration, exiting...' %
@@ -134,12 +135,9 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         Notify.init("fedmsg")
         note = Notify.Notification.new("fedmsg", "activated", "fedmsg-notify")
         note.show()
-        self.close_after_timeout(note)
+        reactor.callLater(3.0, note.close)
         self.notifications.insert(0, note)
         self.enabled = True
-
-    def close_after_timeout(self, note, timeout=3.0):
-        reactor.callLater(timeout, note.close)
 
     def connect_signal_handlers(self):
         self.setting_conn = self.settings.connect(
@@ -148,6 +146,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
                               self.settings_changed)
         self.settings.connect('changed::filter-settings',
                               self.settings_changed)
+        self.settings.connect('changed::expiration', self.settings_changed)
 
     def settings_changed(self, settings, key):
         self.enabled_filters = get_enabled_filters(self.settings)
@@ -178,6 +177,8 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
             pass
         elif key == 'emit-dbus-signals':
             self.emit_dbus_signals = settings.get_boolean(key)
+        elif key == 'expiration':
+            self.expire = self.settings.get_int('expiration')
         else:
             log.warn('Unknown setting changed: %s' % key)
 
@@ -224,6 +225,8 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
             self.notifications.insert(0, note)
             if len(self.notifications) >= self.max_notifications:
                 self.notifications.pop().close()
+            if self.expire:
+                reactor.callLater(self.expire, note.close)
         except:
             log.exception('Unable to display notification')
 

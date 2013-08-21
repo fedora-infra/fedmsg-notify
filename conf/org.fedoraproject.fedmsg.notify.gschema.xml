@@ -31,5 +31,10 @@
       <summary>The prefix of the topics we want to listen to</summary>
       <description>The prefix of the topics we want to get notified for.</description>
     </key>
+    <key type="i" name="expiration">
+      <default>0</default>
+      <summary>The default expiration of all notifications</summary>
+      <description>Defines how many seconds to display each notification. The default is 0, which causes them to never expire.</description>
+    </key>
   </schema>
 </schemalist>
