@@ -219,7 +219,8 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         title, subtitle = self.format_text(body)
         icon, secondary_icon = self.get_icons(body)
         note = Notify.Notification.new(title, subtitle, icon)
-        note.set_hint_string('image-path', secondary_icon)
+        if secondary_icon:
+            note.set_hint_string('image-path', secondary_icon)
         try:
             note.show()
             self.notifications.insert(0, note)
