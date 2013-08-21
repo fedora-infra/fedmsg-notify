@@ -132,7 +132,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         dbus.service.Object.__init__(self, bus_name, self._object_path)
 
         Notify.init("fedmsg")
-        note = Notify.Notification.new("fedmsg", "activated", "")
+        note = Notify.Notification.new("fedmsg", "activated", "fedmsg-notify")
         note.show()
         self.notifications.insert(0, note)
         self.enabled = True
