@@ -217,17 +217,17 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         icon = self._icon_cache.get(fedmsg.text.msg2icon(body, **self.cfg))
         secondary_icon = self._icon_cache.get(
                 fedmsg.text.msg2secondary_icon(body, **self.cfg))
-
-        note = Notify.Notification.new(title, subtitle + ' ' + link, icon)
-        if not note:
-            log.error("Notification.new returned %r" % note)
-            return
-
+        ico = hint = None
         if secondary_icon:
-            note.set_hint_string('image-path', secondary_icon)
+            ico = secondary_icon
+            hint = icon and icon or secondary_icon
+        elif icon:
+            ico = hint = icon
 
-        if len(self.notifications) >= self.max_notifications:
-            self.notifications.pop().close()
+
+        note = Notify.Notification.new(title, subtitle + ' ' + link, ico)
+        if hint:
+            note.set_hint_string('image-path', hint)
 
         try:
             note.show()
