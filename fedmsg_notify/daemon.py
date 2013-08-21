@@ -215,9 +215,28 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     def display_notification(self, results, body, *args, **kw):
         pretty_text = fedmsg.text.msg2repr(body, **self.cfg)
         log.debug(pretty_text)
+        title, subtitle = self.format_text(body)
+        icon, secondary_icon = self.get_icons(body)
+        note = Notify.Notification.new(title, subtitle, icon)
+        if secondary_icon:
+            note.set_hint_string('image-path', secondary_icon)
+        try:
+            note.show()
+            self.notifications.insert(0, note)
+            if len(self.notifications) >= self.max_notifications:
+                self.notifications.pop().close()
+        except:
+            log.exception('Unable to display notification')
+
+    def format_text(self, body):
         title = fedmsg.text.msg2title(body, **self.cfg) or ''
         subtitle = fedmsg.text.msg2subtitle(body, **self.cfg) or ''
         link = fedmsg.text.msg2link(body, **self.cfg) or ''
+        if link:
+            subtitle = '{} {}'.format(subtitle, link)
+        return title, subtitle
+
+    def get_icons(self, body):
         icon = self._icon_cache.get(fedmsg.text.msg2icon(body, **self.cfg))
         secondary_icon = self._icon_cache.get(
                 fedmsg.text.msg2secondary_icon(body, **self.cfg))
@@ -227,17 +246,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
             hint = icon and icon or secondary_icon
         elif icon:
             ico = hint = icon
-
-
-        note = Notify.Notification.new(title, subtitle + ' ' + link, ico)
-        if hint:
-            note.set_hint_string('image-path', hint)
-
-        try:
-            note.show()
-            self.notifications.insert(0, note)
-        except:
-            log.exception('Unable to display notification')
+        return ico, hint
 
     def fetch_icons(self, msg):
         icons = []
