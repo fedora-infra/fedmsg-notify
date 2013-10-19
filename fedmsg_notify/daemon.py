@@ -334,6 +334,8 @@ def main():
             return
         except psutil.NoSuchProcess:
             os.unlink(pidfile)
+        except ValueError:
+            pass
 
     with file(pidfile, 'w') as f:
         f.write(str(os.getpid()))
