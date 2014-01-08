@@ -40,6 +40,7 @@ import moksha.hub
 import fedmsg.text
 import fedmsg.consumers
 
+from PIL import Image
 from gi.repository import Notify, Gio
 
 from filters import get_enabled_filters, filters as all_filters
@@ -290,6 +291,20 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
             os.unlink(filename)
         else:
             cache[icon_url] = cache[checksum] = filename
+
+        img = Image.open(filename)
+        if img.mode not in ('RGB', 'RGBA'):
+            log.debug(img.mode)
+            img = img.convert('RGB')
+            img.save(filename, format='PNG')
+            log.debug(filename)
+
+        # If the image is > 200x100, resize it.
+        height, width = img.size
+        if height > 200 or width > 100:
+            log.debug('Resizing %s image from %r' % (filename, img.size, ))
+            img.thumbnail((200, 100), Image.ANTIALIAS)
+            img.save(filename, 'PNG')
 
     def hash_file(self, filename):
         md5 = hashlib.md5(usedforsecurity=False)
