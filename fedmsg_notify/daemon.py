@@ -330,8 +330,11 @@ def main():
     if os.path.exists(pidfile):
         try:
             with file(pidfile) as f:
-                psutil.Process(int(f.read()))
-            return
+                proc = psutil.Process(int(f.read()))
+                if proc.name != 'fedmsg-notify-d':
+                    os.unlink(pidfile)
+                else:
+                    return
         except psutil.NoSuchProcess:
             os.unlink(pidfile)
         except ValueError:
