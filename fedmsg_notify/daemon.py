@@ -341,7 +341,10 @@ def main():
             pass
 
     with file(pidfile, 'w') as f:
-        f.write(str(os.getpid()))
+        try:
+            f.write(str(os.getpid()))
+        except IOError:
+            log.exception('Unable to write pidfile')
 
     service = FedmsgNotifyService()
     if service.enabled:
