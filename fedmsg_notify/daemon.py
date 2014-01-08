@@ -236,7 +236,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         subtitle = fedmsg.text.msg2subtitle(body, **self.cfg) or ''
         link = fedmsg.text.msg2link(body, **self.cfg) or ''
         if link:
-            subtitle = '{} {}'.format(subtitle, link)
+            subtitle = u'{} {}'.format(subtitle, link)
         return title, subtitle
 
     def get_icons(self, body):
