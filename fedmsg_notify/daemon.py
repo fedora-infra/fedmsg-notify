@@ -236,7 +236,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         subtitle = fedmsg.text.msg2subtitle(body, **self.cfg) or ''
         link = fedmsg.text.msg2link(body, **self.cfg) or ''
         if link:
-            subtitle = '{} {}'.format(subtitle, link)
+            subtitle = u'{} {}'.format(subtitle, link)
         return title, subtitle
 
     def get_icons(self, body):
@@ -330,13 +330,21 @@ def main():
     if os.path.exists(pidfile):
         try:
             with file(pidfile) as f:
-                psutil.Process(int(f.read()))
-            return
+                proc = psutil.Process(int(f.read()))
+                if proc.name != 'fedmsg-notify-d':
+                    os.unlink(pidfile)
+                else:
+                    return
         except psutil.NoSuchProcess:
             os.unlink(pidfile)
+        except ValueError:
+            pass
 
     with file(pidfile, 'w') as f:
-        f.write(str(os.getpid()))
+        try:
+            f.write(str(os.getpid()))
+        except IOError:
+            log.exception('Unable to write pidfile')
 
     service = FedmsgNotifyService()
     if service.enabled:
