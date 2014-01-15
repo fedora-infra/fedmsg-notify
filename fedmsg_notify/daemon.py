@@ -40,7 +40,7 @@ import moksha.hub
 import fedmsg.text
 import fedmsg.consumers
 
-from gi.repository import Notify, Gio
+from gi.repository import Notify, Gio, GLib
 
 from filters import get_enabled_filters, filters as all_filters
 
@@ -310,8 +310,11 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
             return
         self.enabled = False
 
-        for note in self.notifications:
-            note.close()
+        try:
+            for note in self.notifications:
+                note.close()
+        except GLib.GError:  # Bug 1053160
+            pass
 
         Notify.uninit()
 
