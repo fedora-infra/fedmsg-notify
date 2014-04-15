@@ -22,12 +22,12 @@ import logging
 log = logging.getLogger('moksha.hub')
 
 try:
-    from .debian import *
+    from ._debian import *
 except ImportError:
     pass
 
 try:
-    from .fedora import *
+    from ._fedora import *
 except ImportError:
     pass
 
