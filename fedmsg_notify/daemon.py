@@ -40,7 +40,7 @@ import moksha.hub
 import fedmsg.text
 import fedmsg.consumers
 
-from gi.repository import Notify, Gio
+from gi.repository import Notify, Gio, GLib
 
 from filters import get_enabled_filters, filters as all_filters
 
@@ -96,7 +96,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
         try:
             self.session_bus = dbus.SessionBus()
-        except dbus.exceptions.DBusException, e:
+        except dbus.exceptions.DBusException:
             log.exception('Unable to connect to DBus SessionBus')
             return
         if self.session_bus.name_has_owner(self.bus_name):
@@ -242,7 +242,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     def get_icons(self, body):
         icon = self._icon_cache.get(fedmsg.text.msg2icon(body, **self.cfg))
         secondary_icon = self._icon_cache.get(
-                fedmsg.text.msg2secondary_icon(body, **self.cfg))
+            fedmsg.text.msg2secondary_icon(body, **self.cfg))
         ico = hint = None
         if secondary_icon:
             ico = secondary_icon
@@ -310,8 +310,11 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
             return
         self.enabled = False
 
-        for note in self.notifications:
-            note.close()
+        try:
+            for note in self.notifications:
+                note.close()
+        except GLib.GError:  # Bug 1053160
+            pass
 
         Notify.uninit()
 

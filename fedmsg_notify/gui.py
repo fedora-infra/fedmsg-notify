@@ -81,6 +81,11 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
                                    margin_left=10, margin_right=10,
                                    vexpand=True, hexpand=True)
 
+        self.scrolled_topic_window = Gtk.ScrolledWindow()
+        self.scrolled_topic_window.set_policy(Gtk.PolicyType.AUTOMATIC,
+                                              Gtk.PolicyType.AUTOMATIC)
+        self.scrolled_topic_window.add_with_viewport(self.topic_grid)
+
         # Advanced filter grid
         self.advanced_grid = Gtk.Grid(halign=Gtk.Align.FILL, column_spacing=10,
                                       margin_top=10, margin_bottom=10,
@@ -102,7 +107,7 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         # Tabs
         self.notebook = Gtk.Notebook(vexpand=True, hexpand=True)
         vbox.pack_start(self.notebook, True, True, 0)
-        self.notebook.append_page(self.topic_grid,
+        self.notebook.append_page(self.scrolled_topic_window,
                                   Gtk.Label.new_with_mnemonic('_Topics'))
         self.notebook.append_page(self.advanced_grid,
                                   Gtk.Label.new_with_mnemonic('_Advanced'))

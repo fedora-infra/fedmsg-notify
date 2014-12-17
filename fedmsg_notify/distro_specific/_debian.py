@@ -21,7 +21,6 @@ from cStringIO import StringIO
 import email.utils
 import gzip
 import logging
-import os
 import urllib2
 
 import deb822
@@ -90,3 +89,11 @@ def get_user_packages(usernames):
         packages |= UPLOADERS[username]
 
     return packages
+
+
+def get_reported_bugs():
+    """
+    Not implemented on debian, just return empty set
+    """
+
+    return set()

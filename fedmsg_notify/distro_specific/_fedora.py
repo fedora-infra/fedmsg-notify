@@ -19,10 +19,12 @@
 import logging
 
 import yum
+import problem
 from fedora.client.pkgdb import PackageDB
 
 
 log = logging.getLogger('moksha.hub')
+
 
 def get_installed_packages():
     """Retrieve the packages installed on the system"""
@@ -30,6 +32,7 @@ def get_installed_packages():
     yb.doConfigSetup(init_plugins=False)
     for pkg in yb.doPackageLists(pkgnarrow='installed'):
         yield pkg.base_package_name
+
 
 def get_user_packages(usernames):
     packages = set()
@@ -39,3 +42,22 @@ def get_user_packages(usernames):
             packages.add(pkg['name'])
 
     return packages
+
+
+def get_reported_bugs():
+    """
+    Get bug numbers from local abrt reports
+    """
+
+    bugs = set()
+
+    for prob in problem.list():
+        if not hasattr(prob, 'reported_to'):
+            continue
+
+        for line in prob.reported_to.splitlines():
+            if line.startswith('Bugzilla:'):
+                bug_num = int(line.split('=')[-1])
+                bugs.add(bug_num)
+
+    return bugs

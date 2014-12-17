@@ -16,13 +16,14 @@
 # Copyright (C) 2012, 2013 Red Hat, Inc.
 # Authors: Luke Macken <lmacken@redhat.com>
 
-import os
 import json
 import logging
 
 from twisted.internet import reactor
 
-from .distro_specific import *
+from .distro_specific import (get_installed_packages,
+                              get_reported_bugs,
+                              get_user_packages)
 
 log = logging.getLogger('moksha.hub')
 
@@ -46,18 +47,8 @@ class ReportedBugsFilter(Filter):
     __description__ = 'Bugs that you have encountered'
 
     def __init__(self, settings):
-        """ Pull bug numbers out of local abrt reports """
-        self.bugs = set()
-        crash_dir = os.path.expanduser('~/.cache/abrt/spool')
-        if os.path.exists(crash_dir):
-            for crash in os.listdir(crash_dir):
-                report = os.path.join(crash_dir, crash, 'reported_to')
-                if os.path.exists(report):
-                    for line in open(report):
-                        if line.startswith('Bugzilla:'):
-                            #bug_url = line.split('URL=')[-1]
-                            bug_num = int(line.split('=')[-1])
-                            self.bugs.add(bug_num)
+        """ Pull bug numbers out of local reports """
+        self.bugs = get_reported_bugs()
 
     def match(self, msg, processor):
         """ Check if this update fixes and of our bugs """
