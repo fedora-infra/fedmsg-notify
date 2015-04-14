@@ -39,6 +39,8 @@ import tempfile
 import moksha.hub
 import fedmsg.text
 import fedmsg.consumers
+import fmn.lib
+import requests
 
 from gi.repository import Notify, Gio, GLib
 
@@ -88,6 +90,12 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         self.max_notifications = self.settings.get_int('max-notifications')
         self.topic = self.settings.get_string('topic')
         self.expire = self.settings.get_int('expiration')
+
+        self.fmn_url = self.settings.get_string('fmn-url')
+        self.use_server_prefs = self.settings.get_boolean('use-server-prefs')
+        self._fmn_openid = self.settings.get_string('fmn-openid')
+        self._preferences = []
+        self._valid_paths = []
 
         if not self.settings.get_boolean('enabled'):
             log.info('Disabled via %r configuration, exiting...' %
@@ -182,25 +190,88 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         else:
             log.warn('Unknown setting changed: %s' % key)
 
+    @property
+    def username(self):
+        import fedora_cert
+        return fedora_cert.read_user_cert()
+
+    @property
+    def openid(self):
+        if not self._fmn_openid:
+            self._fmn_openid = "{user}.id.fedoraproject.org".format(
+                user=self.username)
+        return self._fmn_openid
+
+    @property
+    def preferences(self):
+        def repopulate_functions(preference):
+            for fltr in preference['filters']:
+                for rule in fltr['rules']:
+                    code_path = str(rule['code_path'])
+                    rule['fn'] = fedmsg.utils.load_class(code_path)
+
+            return preference
+
+
+        if not self._preferences:
+            url = self.fmn_url + self.openid + "/desktop/"
+            log.info("Getting preferences from %s" % url)
+
+            response = requests.get(url)
+            if not response:
+                log.warning("Failed with %r" % response)
+                return []
+
+            preference = response.json()
+            preference = repopulate_functions(preference)
+            self._preferences = [preference]
+        return self._preferences
+
+    @property
+    def valid_paths(self):
+        if not self._valid_paths:
+            self._valid_paths = fmn.lib.load_rules(root="fmn.rules")
+        return self._valid_paths
+
     def consume(self, msg):
         """ Called by fedmsg (Moksha) with each message as they arrive """
-        body, topic = msg.get('body'), msg.get('topic')
-        processor = fedmsg.text.msg2processor(msg)
-        for filter in self.filters:
-            if filter.match(body, processor):
-                log.debug('Matched topic %s with %s' % (topic, filter))
-                break
-        else:
-            for filter in self.service_filters:
-                if filter.match(topic):
-                    log.debug('Matched topic %s with %s' % (topic, filter.pattern))
-                    break
-            else:
+        msg, topic = msg.get('body'), msg.get('topic')
+
+        # Here we have two totally different methods for determining what
+        # messages to show.  One way allows using preferences as queried from a
+        # web service, namely https://apps.fedoraproject.org/notifications
+        # The other allows using preferences from a local set kept in gsettings
+        if self.use_server_prefs:
+            if '.fmn.' in topic:
+                openid = msg['msg']['openid']
+                if openid == self.openid:
+                    log.info("Noticed a pref change for %s", openid)
+                    self._preferences = None  # This will trigger a reload.
+
+            recipients = fmn.lib.recipients(
+                self.preferences, msg, self.valid_paths, self.cfg)
+
+            if not recipients:
                 log.debug("Message to %s didn't match filters" % topic)
                 return
+        else:
+            processor = fedmsg.text.msg2processor(msg)
+            for filter in self.filters:
+                if filter.match(msg, processor):
+                    log.debug('Matched topic %s with %s' % (topic, filter))
+                    break
+            else:
+                for filter in self.service_filters:
+                    if filter.match(topic):
+                        log.debug('Matched topic %s with %s' % (topic, filter.pattern))
+                        break
+                else:
+                    log.debug("Message to %s didn't match filters" % topic)
+                    return
+
 
         if self.emit_dbus_signals:
-            self.MessageReceived(topic, json.dumps(body))
+            self.MessageReceived(topic, json.dumps(msg))
 
         self.notify(msg)
 
