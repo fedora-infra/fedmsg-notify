@@ -36,6 +36,18 @@ application menu. You can also run `fedmsg-notify-config` by hand, or `python
 ![fedmsg-notify-config](http://lewk.org/img/fedmsg-notify-config-0.png "fedmsg-notify-config")
 ![fedmsg-notify-config](http://lewk.org/img/fedmsg-notify-config-1.png "fedmsg-notify-config")
 
+Using notification preferences from the FMN server
+--------------------------------------------------
+
+It is possible to retrieve your notification preferences from the [FMN
+server](https://apps.fedoraproject.org/notifications/) instead of configuring
+them locally. To enable this behavior, run:
+
+```
+gsettings set org.fedoraproject.fedmsg.notify use-server-prefs true
+gsettings set org.fedoraproject.fedmsg.notify fmn-url https://apps.fedoraproject.org/notifications/api/
+```
+
 Writing applications that consume fedmsg messages through DBus
 --------------------------------------------------------------
 

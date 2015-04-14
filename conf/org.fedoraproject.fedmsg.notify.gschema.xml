@@ -36,5 +36,31 @@
       <summary>The default expiration of all notifications</summary>
       <description>Defines how many seconds to display each notification. The default is 0, which causes them to never expire.</description>
     </key>
+    <key type="b" name="use-server-prefs">
+      <default>false</default>
+      <summary>Use server preferences</summary>
+      <description>
+          This tells fedmsg-notify to get its notification preferences from the
+          FMN server directly.  By default, this is false and fedmsg-notify
+          will use the local preferences stored on disk.
+      </description>
+    </key>
+    <key type="s" name="fmn-url">
+      <default>'https://apps.fedoraproject.org/notifications/api/'</default>
+      <summary>URL of the FMN server's API</summary>
+      <description>
+          When used in combination with the use-server-prefs setting, this
+          tells fedmsg-notiy where to find its remotely hosted preferences.
+      </description>
+    </key>
+    <key type="s" name="fmn-openid">
+        <default>''</default>
+        <summary>FMN openid to use when querying for remote preferences.</summary>
+        <description>
+            When used in combination with the use-server-prefs setting, this
+            tells fedmsg-notiy what openid account to query for on the FMN
+            server. Defaults to the fas openid retrieved from ~/.fedora.cert.
+        </description>
+    </key>
   </schema>
 </schemalist>

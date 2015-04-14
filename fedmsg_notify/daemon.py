@@ -91,8 +91,9 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         self.topic = self.settings.get_string('topic')
         self.expire = self.settings.get_int('expiration')
 
-        # TODO -- turn this to True and come up with a way to set it in conf.
-        self.use_server_preferences = False
+        self.fmn_url = self.settings.get_string('fmn-url')
+        self.use_server_prefs = self.settings.get_boolean('use-server-prefs')
+        self._fmn_openid = self.settings.get_string('fmn-openid')
         self._preferences = []
         self._valid_paths = []
 
@@ -196,7 +197,10 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
     @property
     def openid(self):
-        return "{user}.id.fedoraproject.org".format(user=self.username)
+        if not self._fmn_openid:
+            self._fmn_openid = "{user}.id.fedoraproject.org".format(
+                user=self.username)
+        return self._fmn_openid
 
     @property
     def preferences(self):
@@ -210,10 +214,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
 
         if not self._preferences:
-            #base_url = "https://apps.stg.fedoraproject.org/notifications/api/"
-            #base_url = "http://localhost:5000/api/"
-            base_url = "https://apps.fedoraproject.org/notifications/api/"
-            url = base_url + self.openid + "/desktop/"
+            url = self.fmn_url + self.openid + "/desktop/"
             log.info("Getting preferences from %s" % url)
 
             response = requests.get(url)
@@ -240,7 +241,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         # messages to show.  One way allows using preferences as queried from a
         # web service, namely https://apps.fedoraproject.org/notifications
         # The other allows using preferences from a local set kept in gsettings
-        if self.use_server_preferences:
+        if self.use_server_prefs:
             if '.fmn.' in topic:
                 openid = msg['msg']['openid']
                 if openid == self.openid:
