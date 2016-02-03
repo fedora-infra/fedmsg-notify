@@ -20,7 +20,7 @@ import logging
 
 import yum
 import problem
-from fedora.client.pkgdb import PackageDB
+import pkgdb2client
 
 
 log = logging.getLogger('moksha.hub')
@@ -38,9 +38,10 @@ def get_user_packages(usernames):
     packages = set()
     for username in usernames:
         log.info("Querying the PackageDB for %s's packages" % username)
-        for pkg in PackageDB().user_packages(username)['pkgs']:
-            packages.add(pkg['name'])
-
+        pkgs = pkgdb2client.PkgDB().get_packager_package(username)
+        for category in ('point of contact', 'co-maintained', 'watch'):
+            for pkg in pkgs[category]:
+                packages.add(pkg['name'])
     return packages
 
 
