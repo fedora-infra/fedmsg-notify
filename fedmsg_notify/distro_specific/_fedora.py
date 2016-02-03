@@ -18,7 +18,7 @@
 
 import logging
 
-import yum
+import dnf
 import problem
 from fedora.client.pkgdb import PackageDB
 
@@ -28,11 +28,12 @@ log = logging.getLogger('moksha.hub')
 
 def get_installed_packages():
     """Retrieve the packages installed on the system"""
-    yb = yum.YumBase()
-    yb.doConfigSetup(init_plugins=False)
-    for pkg in yb.doPackageLists(pkgnarrow='installed'):
-        yield pkg.base_package_name
-
+    base = dnf.Base()
+    sack = base.fill_sack(load_system_repo=True)
+    query = sack.query()
+    installed = query.installed()
+    pkgs = installed.run()
+    return (pkg.name for pkg in pkgs)
 
 def get_user_packages(usernames):
     packages = set()
