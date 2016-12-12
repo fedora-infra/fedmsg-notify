@@ -19,11 +19,18 @@
 import logging
 
 import dnf
-import problem
 import pkgdb2client
 
 
 log = logging.getLogger('moksha.hub')
+
+try:
+    import problem
+except ImportError:
+    log.warn("Could not import the ABRT bindings. You won't be able to see the reported bugs.")
+    HAS_ABRT = False
+else:
+    HAS_ABRT = True
 
 
 def get_installed_packages():
@@ -50,6 +57,8 @@ def get_reported_bugs():
     """
     Get bug numbers from local abrt reports
     """
+    if not HAS_ABRT:
+        return set()
 
     bugs = set()
 
@@ -63,3 +72,5 @@ def get_reported_bugs():
                 bugs.add(bug_num)
 
     return bugs
+if not HAS_ABRT:
+    get_reported_bugs.disabled = True
