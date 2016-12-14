@@ -18,29 +18,38 @@
 
 import logging
 
-import yum
-import problem
-from fedora.client.pkgdb import PackageDB
+import dnf
+import pkgdb2client
 
 
 log = logging.getLogger('moksha.hub')
 
+try:
+    import problem
+except ImportError:
+    log.warn("Could not import the ABRT bindings. You won't be able to see the reported bugs.")
+    HAS_ABRT = False
+else:
+    HAS_ABRT = True
+
 
 def get_installed_packages():
     """Retrieve the packages installed on the system"""
-    yb = yum.YumBase()
-    yb.doConfigSetup(init_plugins=False)
-    for pkg in yb.doPackageLists(pkgnarrow='installed'):
-        yield pkg.base_package_name
-
+    base = dnf.Base()
+    sack = base.fill_sack(load_system_repo=True)
+    query = sack.query()
+    installed = query.installed()
+    pkgs = installed.run()
+    return (pkg.name for pkg in pkgs)
 
 def get_user_packages(usernames):
     packages = set()
     for username in usernames:
         log.info("Querying the PackageDB for %s's packages" % username)
-        for pkg in PackageDB().user_packages(username)['pkgs']:
-            packages.add(pkg['name'])
-
+        pkgs = pkgdb2client.PkgDB().get_packager_package(username)
+        for category in ('point of contact', 'co-maintained', 'watch'):
+            for pkg in pkgs[category]:
+                packages.add(pkg['name'])
     return packages
 
 
@@ -48,6 +57,8 @@ def get_reported_bugs():
     """
     Get bug numbers from local abrt reports
     """
+    if not HAS_ABRT:
+        return set()
 
     bugs = set()
 
@@ -61,3 +72,5 @@ def get_reported_bugs():
                 bugs.add(bug_num)
 
     return bugs
+if not HAS_ABRT:
+    get_reported_bugs.disabled = True

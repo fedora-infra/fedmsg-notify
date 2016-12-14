@@ -38,6 +38,10 @@ class Filter(object):
     def match(self, msg, processor):
         raise NotImplementedError
 
+    @classmethod
+    def is_available(self):
+        return True
+
     def __repr__(self):
         return '<%s>' % self.__class__.__name__
 
@@ -60,6 +64,10 @@ class ReportedBugsFilter(Filter):
                     if bug in bugs:
                         log.info("Message contains bug that user filed!")
                         return True
+
+    @classmethod
+    def is_available(self):
+        return not getattr(get_reported_bugs, 'disabled', False)
 
 
 class MyPackageFilter(Filter):

@@ -97,3 +97,4 @@ def get_reported_bugs():
     """
 
     return set()
+get_reported_bugs.disabled = True

@@ -143,10 +143,15 @@ class FedmsgNotifyConfigWindow(Gtk.ApplicationWindow):
         for filter in filters:
             label = Gtk.Label(halign=Gtk.Align.START, hexpand=True)
             label.set_text(filter.__description__)
-            switch = Gtk.Switch(halign=Gtk.Align.END, active=filter.__name__ in
-                                self.enabled_filters)
+            if not filter.is_available():
+                switch = Gtk.Label(halign=Gtk.Align.END, hexpand=True)
+                switch.set_markup("<i>(unavailable)</i>")
+            else:
+                switch = Gtk.Switch(
+                    halign=Gtk.Align.END, active=filter.__name__
+                    in self.enabled_filters)
+                self._switches[switch] = None
             switch.__name__ = filter.__name__
-            self._switches[switch] = None
             self.advanced_grid.attach_next_to(label, top_label,
                                               Gtk.PositionType.BOTTOM, 1, 1)
             self.advanced_grid.attach_next_to(switch, top_switch,
