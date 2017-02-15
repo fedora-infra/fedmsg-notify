@@ -389,7 +389,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
         Notify.uninit()
 
-        self.hub.close()
+        super(FedmsgNotifyService, self).stop()
         try:
             reactor.stop()
         except ReactorNotRunning:
