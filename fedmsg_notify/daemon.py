@@ -390,10 +390,6 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
         Notify.uninit()
 
         super(FedmsgNotifyService, self).stop()
-        try:
-            reactor.stop()
-        except ReactorNotRunning:
-            pass
 
         shutil.rmtree(self.cache_dir, ignore_errors=True)
         if os.path.exists(pidfile):
@@ -422,7 +418,7 @@ def main():
 
     service = FedmsgNotifyService()
     if service.enabled:
-        atexit.register(service.stop)
+        reactor.addSystemEventTrigger('before', 'shutdown', service.stop)
         reactor.run()
 
 if __name__ == '__main__':
