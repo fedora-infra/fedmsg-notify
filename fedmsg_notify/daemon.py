@@ -374,9 +374,9 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
     @dbus.service.method(bus_name)
     def Disable(self, *args, **kw):
-        self.__del__()
+        reactor.stop()
 
-    def __del__(self):
+    def stop(self):
         if not self.enabled:
             return
         self.enabled = False
@@ -422,7 +422,7 @@ def main():
 
     service = FedmsgNotifyService()
     if service.enabled:
-        atexit.register(service.__del__)
+        atexit.register(service.stop)
         reactor.run()
 
 if __name__ == '__main__':
