@@ -282,7 +282,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     def notify(self, msg):
         d = self.fetch_icons(msg)
         d.addCallbacks(self.display_notification, errback=log.error,
-                       callbackArgs=(msg['body'],))
+                       callbackArgs=(msg,))
 
     def display_notification(self, results, body, *args, **kw):
         pretty_text = fedmsg.text.msg2repr(body, **self.cfg)
