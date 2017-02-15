@@ -9,7 +9,7 @@ requires = [
 
 setup(
         name="fedmsg-notify",
-        version='0.5.6',
+        version='0.5.7',
         description="Consumer for fedmsg that spits out libnotify desktop notifications",
         author="Luke Macken, Ross Delinger",
         author_email="lmacken@redhat.com",
