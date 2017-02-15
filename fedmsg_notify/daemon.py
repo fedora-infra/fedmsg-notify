@@ -16,6 +16,9 @@
 # Copyright (C) 2012, 2013 Red Hat, Inc.
 # Author: Luke Macken <lmacken@redhat.com>
 
+import gi
+gi.require_version('Gtk', '3.0')
+
 from twisted.internet import gtk3reactor
 gtk3reactor.install()
 from twisted.internet import reactor
@@ -42,6 +45,7 @@ import fedmsg.consumers
 import fmn.lib
 import requests
 
+gi.require_version('Notify', '0.7')
 from gi.repository import Notify, Gio, GLib
 
 from filters import get_enabled_filters, filters as all_filters
@@ -122,7 +126,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
             ),
         }
         self.cfg.update(moksha_options)
-        self.cache_dir = tempfile.mkdtemp()
+        self.cache_dir = tempfile.mkdtemp(prefix="fedmsg-notify-daemon-")
 
         fedmsg.text.make_processors(**self.cfg)
         self.settings_changed(self.settings, 'enabled-filters')
@@ -282,7 +286,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
     def notify(self, msg):
         d = self.fetch_icons(msg)
         d.addCallbacks(self.display_notification, errback=log.error,
-                       callbackArgs=(msg['body'],))
+                       callbackArgs=(msg,))
 
     def display_notification(self, results, body, *args, **kw):
         pretty_text = fedmsg.text.msg2repr(body, **self.cfg)
@@ -374,9 +378,9 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
     @dbus.service.method(bus_name)
     def Disable(self, *args, **kw):
-        self.__del__()
+        reactor.stop()
 
-    def __del__(self):
+    def stop(self):
         if not self.enabled:
             return
         self.enabled = False
@@ -389,11 +393,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
         Notify.uninit()
 
-        self.hub.close()
-        try:
-            reactor.stop()
-        except ReactorNotRunning:
-            pass
+        super(FedmsgNotifyService, self).stop()
 
         shutil.rmtree(self.cache_dir, ignore_errors=True)
         if os.path.exists(pidfile):
@@ -422,7 +422,7 @@ def main():
 
     service = FedmsgNotifyService()
     if service.enabled:
-        atexit.register(service.__del__)
+        reactor.addSystemEventTrigger('before', 'shutdown', service.stop)
         reactor.run()
 
 if __name__ == '__main__':
