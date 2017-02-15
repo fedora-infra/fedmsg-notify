@@ -122,7 +122,7 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
             ),
         }
         self.cfg.update(moksha_options)
-        self.cache_dir = tempfile.mkdtemp()
+        self.cache_dir = tempfile.mkdtemp(prefix="fedmsg-notify-daemon-")
 
         fedmsg.text.make_processors(**self.cfg)
         self.settings_changed(self.settings, 'enabled-filters')
