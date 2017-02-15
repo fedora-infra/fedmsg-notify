@@ -59,7 +59,7 @@ class ReportedBugsFilter(Filter):
         if processor.__name__ == 'Bodhi':
             update = msg['msg'].get('update')
             if update:
-                bugs = [bug['bz_id'] for bug in update['bugs']]
+                bugs = [bug['bug_id'] for bug in update['bugs']]
                 for bug in self.bugs:
                     if bug in bugs:
                         log.info("Message contains bug that user filed!")
