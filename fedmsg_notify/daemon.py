@@ -16,6 +16,9 @@
 # Copyright (C) 2012, 2013 Red Hat, Inc.
 # Author: Luke Macken <lmacken@redhat.com>
 
+import gi
+gi.require_version('Gtk', '3.0')
+
 from twisted.internet import gtk3reactor
 gtk3reactor.install()
 from twisted.internet import reactor
@@ -42,6 +45,7 @@ import fedmsg.consumers
 import fmn.lib
 import requests
 
+gi.require_version('Notify', '0.7')
 from gi.repository import Notify, Gio, GLib
 
 from filters import get_enabled_filters, filters as all_filters
