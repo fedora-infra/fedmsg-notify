@@ -3,8 +3,7 @@ from setuptools import setup
 requires = [
     'fedmsg',
     'twisted',
-    'fmn.lib',
-    'fmn.rules',
+    'fmn',
 ]
 
 setup(
