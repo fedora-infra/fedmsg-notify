@@ -328,11 +328,10 @@ class FedmsgNotifyService(dbus.service.Object, fedmsg.consumers.FedmsgConsumer):
 
     def fetch_icons(self, msg):
         icons = []
-        body = msg.get('body')
-        icon = fedmsg.text.msg2icon(body, **self.cfg)
+        icon = fedmsg.text.msg2icon(msg, **self.cfg)
         if icon:
             icons.append(self.get_icon(icon))
-        secondary_icon = fedmsg.text.msg2secondary_icon(body, **self.cfg)
+        secondary_icon = fedmsg.text.msg2secondary_icon(msg, **self.cfg)
         if secondary_icon:
             icons.append(self.get_icon(secondary_icon))
         return defer.DeferredList(icons)
