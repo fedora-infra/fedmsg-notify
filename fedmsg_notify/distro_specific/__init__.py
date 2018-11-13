@@ -46,3 +46,12 @@ except NameError:
     def get_user_packages(usernames):
         """Retrieve the packages maintained by `usernames`"""
         return []
+
+try:
+    get_reported_bugs
+except NameError:
+    log.warn("Could not import distro-specific packages. Stubbing out the bug retrieval function.")
+    def get_reported_bugs():
+        """Get bug numbers from local abrt reports"""
+        return set()
+    get_reported_bugs.disabled = True
