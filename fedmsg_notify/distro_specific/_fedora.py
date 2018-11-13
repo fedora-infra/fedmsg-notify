@@ -19,7 +19,7 @@
 import logging
 
 import dnf
-import pkgdb2client
+import requests
 
 
 log = logging.getLogger('moksha.hub')
@@ -45,11 +45,13 @@ def get_installed_packages():
 def get_user_packages(usernames):
     packages = set()
     for username in usernames:
-        log.info("Querying the PackageDB for %s's packages" % username)
-        pkgs = pkgdb2client.PkgDB().get_packager_package(username)
-        for category in ('point of contact', 'co-maintained', 'watch'):
-            for pkg in pkgs[category]:
-                packages.add(pkg['name'])
+        log.info("Querying dist-git for %s's packages" % username)
+        response = requests.get(
+            "https://src.fedoraproject.org/api/0/user/{}".format(username)
+        )
+        pkgs = [repo["name"] for repo in response.json()["repos"]]
+        log.info("Got %s packages to notify about" % len(pkgs))
+        packages.update(pkgs)
     return packages
 
 

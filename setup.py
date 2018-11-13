@@ -4,6 +4,7 @@ requires = [
     'fedmsg',
     'twisted',
     'fmn',
+    'requests',
 ]
 
 setup(
